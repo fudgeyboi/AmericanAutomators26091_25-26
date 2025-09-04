@@ -23,12 +23,15 @@ public class TeleOp extends LinearOpMode {
 
         /// Main loop
         while (opModeIsActive()) {
+
             /// Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
 
             /// Drive system switch
             switch (driveID) {
+
                 case 1:
+
                     /// Field centric
                     double heading = mecanumDrive.localizer.getPose().heading.toDouble();
                     mecanumDrive.setDrivePowers(new PoseVelocity2d(
@@ -40,11 +43,17 @@ public class TeleOp extends LinearOpMode {
                             ),
                             -gamepad1.right_stick_x / 2
                     ));
+                    telemetry.addData("DriveSystem is Field Centric", "");
                     break;
+
                 case 2:
+
                     /// Reserved for player centric
+                    telemetry.addData("DriveSystem is Player Centric", "");
                     break;
+
                 default:
+
                     /// Robot centric
                     mecanumDrive.setDrivePowers(new PoseVelocity2d(
                             new Vector2d(
@@ -53,6 +62,7 @@ public class TeleOp extends LinearOpMode {
                             ),
                             gamepad1.right_stick_x
                     ));
+                    telemetry.addData("DriveSystem is Robot Centric", "");
                     break;
             }
 
@@ -60,16 +70,16 @@ public class TeleOp extends LinearOpMode {
             if (gamepad1.dpad_down && !prevdown && (driveID > 0)) {
                 driveID -= 1;
             }
-
             if (gamepad1.dpad_up && !prevup && (driveID < 2)) {
                 driveID += 1;
             }
 
-
             /// Set PrevState variables
             prevup = gamepad1.dpad_up;
             prevdown = gamepad1.dpad_down;
-        }
 
+            /// Telemetry block
+            telemetry.update();
+        }
     }
 }
