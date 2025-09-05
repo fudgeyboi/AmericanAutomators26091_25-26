@@ -73,14 +73,19 @@ public class TeleOp extends LinearOpMode {
                         break;
                 }
             } catch (Exception e) {
-                mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                        new Vector2d(
-                                0,
-                                0
-                        ),
-                        0
-                ));
-                throw new DriveException("Exception in drive block! Disabling motors.", e);
+                /// I couldn't explain this mess if I tried
+                try {
+                    mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                            new Vector2d(
+                                    0,
+                                    0
+                            ),
+                            0
+                    ));
+                    telemetry.addData("Handled Exception in Drivetrain block.", "");
+                } catch (Exception e2) {
+                    throw new DriveException("Unhandled Exception in Drivetrain block.", e2);
+                }
             }
 
             /// Code to control the drive system switching
