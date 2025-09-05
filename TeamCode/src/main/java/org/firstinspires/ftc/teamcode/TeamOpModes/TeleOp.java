@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
+
+import org.firstinspires.ftc.teamcode.DriveException;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
@@ -27,43 +29,48 @@ public class TeleOp extends LinearOpMode {
             /// Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
 
-            /// Drive system switch
-            switch (driveID) {
+            /// Try catch block
+            try {
+                /// Switch drive mode
+                switch (driveID) {
 
-                case 1:
+                    case 1:
 
-                    /// Field centric
-                    double heading = mecanumDrive.localizer.getPose().heading.toDouble();
-                    mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                            new Vector2d(
-                                    ((gamepad1.left_stick_y * java.lang.Math.sin(heading))
-                                            - (gamepad1.left_stick_x * java.lang.Math.cos(heading))) / 1.5,
-                                    ((gamepad1.left_stick_y * java.lang.Math.cos(heading))
-                                            + (gamepad1.left_stick_x * java.lang.Math.sin(heading))) / 1.5
-                            ),
-                            -gamepad1.right_stick_x / 2
-                    ));
-                    telemetry.addData("DriveSystem is Field Centric", "");
-                    break;
+                        /// Field centric
+                        double heading = mecanumDrive.localizer.getPose().heading.toDouble();
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                new Vector2d(
+                                        ((gamepad1.left_stick_y * java.lang.Math.sin(heading))
+                                                - (gamepad1.left_stick_x * java.lang.Math.cos(heading))) / 1.5,
+                                        ((gamepad1.left_stick_y * java.lang.Math.cos(heading))
+                                                + (gamepad1.left_stick_x * java.lang.Math.sin(heading))) / 1.5
+                                ),
+                                -gamepad1.right_stick_x / 2
+                        ));
+                        telemetry.addData("DriveSystem is Field Centric", "");
+                        break;
 
-                case 2:
+                    case 2:
 
-                    /// Reserved for player centric
-                    telemetry.addData("DriveSystem is Player Centric", "");
-                    break;
+                        /// Reserved for player centric
+                        telemetry.addData("DriveSystem is Player Centric", "");
+                        break;
 
-                default:
+                    default:
 
-                    /// Robot centric
-                    mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                            new Vector2d(
-                                    gamepad1.left_stick_x,
-                                    gamepad1.left_stick_y
-                            ),
-                            gamepad1.right_stick_x
-                    ));
-                    telemetry.addData("DriveSystem is Robot Centric", "");
-                    break;
+                        /// Robot centric
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                new Vector2d(
+                                        gamepad1.left_stick_x,
+                                        gamepad1.left_stick_y
+                                ),
+                                gamepad1.right_stick_x
+                        ));
+                        telemetry.addData("DriveSystem is Robot Centric", "");
+                        break;
+                }
+            } catch (RuntimeException e) {
+                throw new DriveException("Error in drive block!", e);
             }
 
             /// Code to control the drive system switching
