@@ -26,6 +26,7 @@ public class TeleOp extends LinearOpMode {
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(90));
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initialPose);
 
+        waitForStart();
         /// Main loop
         while (opModeIsActive()) {
 
@@ -72,7 +73,7 @@ public class TeleOp extends LinearOpMode {
                         telemetry.addData("DriveSystem is Robot Centric", "");
                         break;
                 }
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 /// I couldn't explain this mess if I tried
                 try {
                     mecanumDrive.setDrivePowers(new PoseVelocity2d(
@@ -83,7 +84,7 @@ public class TeleOp extends LinearOpMode {
                             0
                     ));
                     telemetry.addData("Handled Exception in Drivetrain block.", "");
-                } catch (Exception e2) {
+                } catch (RuntimeException e2) {
                     throw new DriveException("Unhandled Exception in Drivetrain block.", e2);
                 }
             }
