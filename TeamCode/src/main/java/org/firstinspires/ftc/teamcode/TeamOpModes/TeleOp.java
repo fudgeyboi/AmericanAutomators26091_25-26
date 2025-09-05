@@ -7,9 +7,12 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.robotcore.hardware.configuration.annotations.ExpansionHubPIDFVelocityParams;
 
 import org.firstinspires.ftc.teamcode.DriveException;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+
+import java.util.Vector;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
 public class TeleOp extends LinearOpMode {
@@ -69,8 +72,15 @@ public class TeleOp extends LinearOpMode {
                         telemetry.addData("DriveSystem is Robot Centric", "");
                         break;
                 }
-            } catch (RuntimeException e) {
-                throw new DriveException("Error in drive block!", e);
+            } catch (Exception e) {
+                mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                        new Vector2d(
+                                0,
+                                0
+                        ),
+                        0
+                ));
+                throw new DriveException("Exception in drive block! Disabling motors.", e);
             }
 
             /// Code to control the drive system switching
