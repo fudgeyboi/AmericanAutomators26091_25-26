@@ -1,14 +1,19 @@
 package org.firstinspires.ftc.teamcode.TeamOpModes;
 
 // Importing OpMode class
+import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 // Importing RoadRunner classes + dependencies
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.qualcomm.robotcore.hardware.Blinker;
+import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.hardware.configuration.annotations.ExpansionHubPIDFVelocityParams;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcontroller.external.samples.SensorDigitalTouch;
 import org.firstinspires.ftc.teamcode.DriveException;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 
@@ -18,6 +23,10 @@ import java.util.Vector;
 public class TeleOp extends LinearOpMode {
     boolean prevdown = false;
     boolean prevup = false;
+    boolean upPressed = false;
+    boolean downPressed = false;
+    double prevTime = 0;
+    double deltaTime = 0;
     int driveID = 0;
     @Override
     public void runOpMode() throws InterruptedException {
@@ -25,13 +34,18 @@ public class TeleOp extends LinearOpMode {
         /// Set up the drive system
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(90));
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initialPose);
+        TouchSensor touch = hardwareMap.get(TouchSensor.class, "touch");
+        ElapsedTime runtime = new ElapsedTime();
 
         waitForStart();
+        runtime.reset();
         /// Main loop
         while (opModeIsActive()) {
 
             /// Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
+            upPressed = gamepad1.dpad_up;
+            downPressed = gamepad1.dpad_down;
 
             /// Try catch block
             try {
@@ -90,19 +104,26 @@ public class TeleOp extends LinearOpMode {
             }
 
             /// Code to control the drive system switching
-            if (gamepad1.dpad_down && !prevdown && (driveID > 0)) {
+            if (downPressed && !prevdown && (driveID > 0)) {
                 driveID -= 1;
+            } else if (downPressed && !prevdown) {
+                driveID = 2;
             }
-            if (gamepad1.dpad_up && !prevup && (driveID < 2)) {
+            if (upPressed && !prevup && (driveID < 2)) {
                 driveID += 1;
+            } else if (upPressed && !prevup) {
+                driveID = 0;
             }
-
-            /// Set PrevState variables
-            prevup = gamepad1.dpad_up;
-            prevdown = gamepad1.dpad_down;
 
             /// Telemetry block
+            deltaTime = runtime.milliseconds() - prevTime;
+            prevTime = runtime.milliseconds();
+            telemetry.addData("Tick time (ms)", deltaTime);
             telemetry.update();
+
+            /// Set PrevState variables
+            prevup = upPressed;
+            prevdown = downPressed;
         }
     }
 }
