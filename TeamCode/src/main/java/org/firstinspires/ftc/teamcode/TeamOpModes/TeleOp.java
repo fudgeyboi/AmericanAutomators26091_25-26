@@ -1,23 +1,21 @@
 package org.firstinspires.ftc.teamcode.TeamOpModes;
 
+
 // Importing OpMode class
-import com.qualcomm.hardware.rev.RevTouchSensor;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-// Importing RoadRunner classes + dependencies
+// Import hardware classes
+import com.qualcomm.robotcore.hardware.TouchSensor;
+import org.firstinspires.ftc.teamcode.MecanumDrive;
+
+// Import RoadRunner classes + dependencies
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
-import com.qualcomm.robotcore.hardware.Blinker;
-import com.qualcomm.robotcore.hardware.TouchSensor;
-import com.qualcomm.robotcore.hardware.configuration.annotations.ExpansionHubPIDFVelocityParams;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcontroller.external.samples.SensorDigitalTouch;
+// Import custom classes
 import org.firstinspires.ftc.teamcode.DriveException;
-import org.firstinspires.ftc.teamcode.MecanumDrive;
-
-import java.util.Vector;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
 public class TeleOp extends LinearOpMode {
@@ -31,19 +29,22 @@ public class TeleOp extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
 
-        /// Set up the drive system
+        /// Init
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(90));
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initialPose);
-        TouchSensor touch = hardwareMap.get(TouchSensor.class, "touch");
         ElapsedTime runtime = new ElapsedTime();
 
         waitForStart();
+
         runtime.reset();
+
         /// Main loop
-        while (opModeIsActive()) {
+        while (opModeIsActive() && !(gamepad1.back || gamepad2.back)) {
 
             /// Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
+
+            /// Update isPressed variables
             upPressed = gamepad1.dpad_up;
             downPressed = gamepad1.dpad_down;
 
@@ -63,15 +64,15 @@ public class TeleOp extends LinearOpMode {
                                         ((gamepad1.left_stick_y * java.lang.Math.cos(heading))
                                                 + (gamepad1.left_stick_x * java.lang.Math.sin(heading))) / 1.5
                                 ),
-                                -gamepad1.right_stick_x / 2
+                                -((gamepad1.right_stick_x + 1) / 2 + (gamepad1.right_stick_y + 1) / 2) / 2
                         ));
-                        telemetry.addData("DriveSystem is Field Centric", "");
+                        telemetry.addData("DriveSystem is", "Field Centric");
                         break;
 
                     case 2:
 
                         /// Reserved for player centric
-                        telemetry.addData("DriveSystem is Player Centric", "");
+                        telemetry.addData("DriveSystem is", "Player Centric");
                         break;
 
                     default:
@@ -79,12 +80,12 @@ public class TeleOp extends LinearOpMode {
                         /// Robot centric
                         mecanumDrive.setDrivePowers(new PoseVelocity2d(
                                 new Vector2d(
-                                        gamepad1.left_stick_x,
-                                        gamepad1.left_stick_y
+                                        -gamepad1.left_stick_y,
+                                        -gamepad1.left_stick_x
                                 ),
-                                gamepad1.right_stick_x
+                                -(-(gamepad1.right_stick_x + 1) / 2 + (gamepad1.right_stick_y + 1) / 2) / 2
                         ));
-                        telemetry.addData("DriveSystem is Robot Centric", "");
+                        telemetry.addData("DriveSystem is", "Robot Centric");
                         break;
                 }
             } catch (RuntimeException e) {
@@ -114,6 +115,9 @@ public class TeleOp extends LinearOpMode {
             } else if (upPressed && !prevup) {
                 driveID = 0;
             }
+
+            /// Misc motors block
+            
 
             /// Telemetry block
             deltaTime = runtime.milliseconds() - prevTime;
