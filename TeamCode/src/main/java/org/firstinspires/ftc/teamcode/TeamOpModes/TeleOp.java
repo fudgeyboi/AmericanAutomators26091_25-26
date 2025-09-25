@@ -75,6 +75,15 @@ public class TeleOp extends LinearOpMode {
                         telemetry.addData("DriveSystem is", "Player Centric");
                         break;
 
+                    case 3:
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                new Vector2d(
+                                        -gamepad1.left_stick_y,
+                                        0
+                                ),
+                                gamepad1.right_stick_x
+                        ));
+                        telemetry.addData("DriveSystem is", "HammerHead Mode");
                     default:
 
                         /// Robot centric
@@ -108,9 +117,9 @@ public class TeleOp extends LinearOpMode {
             if (downPressed && !prevdown && (driveID > 0)) {
                 driveID -= 1;
             } else if (downPressed && !prevdown) {
-                driveID = 2;
+                driveID = 3;
             }
-            if (upPressed && !prevup && (driveID < 2)) {
+            if (upPressed && !prevup && (driveID < 3)) {
                 driveID += 1;
             } else if (upPressed && !prevup) {
                 driveID = 0;
