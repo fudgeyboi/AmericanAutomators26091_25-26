@@ -63,32 +63,32 @@ public final class MecanumDrive {
                 RevHubOrientationOnRobot.UsbFacingDirection.LEFT;
 
         // drive model parameters
-        public double inPerTick = (double) 48 / (double) 11860;
-        public double lateralInPerTick = 0.0035844158599341114;
-        public double trackWidthTicks = 6908.174899124998;
+        public double inPerTick = (double) 24 / (double) 11860;
+        public double lateralInPerTick = 0.0018;
+        public double trackWidthTicks = 8299;
 
         // feedforward parameters (in tick units)
-        public double kS = 0.96344349858455;
-        public double kV = 0.0004098998703411781;
-        public double kA = 0;
+        public double kS = 0.5;
+        public double kV = 0.00033;
+        public double kA = 0.0001;
 
         // path profile parameters (in inches)
-        public double maxWheelVel = 75;
-        public double minProfileAccel = -60;
-        public double maxProfileAccel = 60;
+        public double maxWheelVel = 60;
+        public double minProfileAccel = -30;
+        public double maxProfileAccel = 30;
 
         // turn profile parameters (in radians)
         public double maxAngVel = Math.PI; // shared with path
         public double maxAngAccel = Math.PI;
 
         // path controller gains
-        public double axialGain = 6;
+        public double axialGain = 4;
         public double lateralGain = 4;
         public double headingGain = 2; // shared with turn
 
-        public double axialVelGain = 1;
+        public double axialVelGain = 0.5;
         public double lateralVelGain = 0.5;
-        public double headingVelGain = 1; // shared with turn
+        public double headingVelGain = 0.5; // shared with turn
     }
 
     public static Params PARAMS = new Params();
@@ -485,7 +485,7 @@ public final class MecanumDrive {
                 new TrajectoryBuilderParams(
                         1e-6,
                         new ProfileParams(
-                                0.25, 0.1, 1e-2
+                                0.1, 0.1, 1e-2
                         )
                 ),
                 beginPose, 0.0,
