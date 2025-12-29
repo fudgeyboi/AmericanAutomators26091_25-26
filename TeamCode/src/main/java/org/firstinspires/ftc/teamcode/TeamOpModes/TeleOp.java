@@ -40,7 +40,6 @@ public class TeleOp extends LinearOpMode {
     double prevTime = 0;
     double deltaTime = 0;
     int driveID = 0;
-    Pose2d backupPose;
     Vector2d PCDrivePowers(Pose2d pose, double gamepadx, double gamepady) {
 
         double heading = pose.heading.toDouble();
