@@ -4,7 +4,6 @@ package org.firstinspires.ftc.teamcode.TeamOpModes;
 // Importing OpMode class
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-
 // Import hardware classes
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -73,7 +72,7 @@ public class TeleOp extends LinearOpMode {
         DcMotorEx launch = hardwareMap.get(DcMotorEx.class, "launch");
         launch.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launch.setCurrentAlert(8, CurrentUnit.AMPS);
-        launch.setVelocityPIDFCoefficients(16, 1.5, 1, 2.5);
+        launch.setVelocityPIDFCoefficients(24, 0.75, 1, 2.5);
         DcMotor intake = hardwareMap.get(DcMotorEx.class, "intake");
         Servo flip = hardwareMap.get(Servo.class, "flip");
         flip.setDirection(Servo.Direction.REVERSE);
@@ -115,7 +114,7 @@ public class TeleOp extends LinearOpMode {
                             .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135));
                     Action aimLeftClose = leftClose.build();
                     runningActions.add(aimLeftClose);
-                    launch.setVelocity(2350);
+                    launch.setVelocity(2300);
                 }
 
                 // Red recenter && wind-up
@@ -124,7 +123,7 @@ public class TeleOp extends LinearOpMode {
                             .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45));
                     Action aimRightClose = rightClose.build();
                     runningActions.add(aimRightClose);
-                    launch.setVelocity(2350);
+                    launch.setVelocity(2300);
                 }
             }
 
@@ -208,6 +207,9 @@ public class TeleOp extends LinearOpMode {
             {
                 if (gamepad2.b) {
                     launch.setVelocity(0);
+                }
+                if (gamepad2.x) {
+                    launch.setVelocity(2600);
                 }
             }
 

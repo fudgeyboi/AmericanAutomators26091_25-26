@@ -1,0 +1,96 @@
+package org.firstinspires.ftc.teamcode.TeamOpModes;
+
+import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.MecanumKinematics;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
+import com.acmerobotics.roadrunner.Vector2d;
+import com.acmerobotics.roadrunner.ftc.Actions;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
+
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+import org.firstinspires.ftc.teamcode.MecanumDrive;
+
+@Autonomous
+public class UnifiedAuto extends LinearOpMode {
+    private Pose2d findPosition(boolean[] inputsTemp) {
+        int result = 0;
+        boolean[] inputs = new boolean[inputsTemp.length];
+        for (int i = 0; i < inputsTemp.length; i++) {
+            inputs[i] = inputsTemp[inputsTemp.length - 1 - i];
+        }
+        for (int i = 0; i < inputs.length && i < 32; i++) {
+            if (inputs[i]) {
+                result |= (1 << i);
+            }
+        }
+        Pose2d startPose = new Pose2d(0, 0, 0);
+        switch (result) {
+            case 0:
+                startPose = new Pose2d(64, -14, Math.toRadians(180));
+                break;
+            case 1:
+                startPose = new Pose2d(64, -32, Math.toRadians(180));
+                break;
+            case 2:
+                startPose = new Pose2d(-36, -48, Math.toRadians(90));
+                break;
+            case 3:
+                startPose = new Pose2d(-64, -32, Math.toRadians(0));
+                break;
+            case 4:
+                startPose = new Pose2d(60, 12, Math.toRadians(-40));
+                break;
+            case 5:
+                startPose = new Pose2d(-40, 56, Math.toRadians(-90));
+                break;
+            case 6:
+                startPose = new Pose2d(-60, 46, Math.toRadians(-50));
+                break;
+        }
+        return startPose;
+    }
+
+    boolean[] poseMap = new boolean[3];
+    boolean dpadDownPrev;
+    boolean dpadUpPrev;
+    public void runOpMode() {
+        Servo flip = hardwareMap.get(Servo.class, "flip");
+        flip.setDirection(Servo.Direction.REVERSE);
+        DcMotorEx launch = hardwareMap.get(DcMotorEx.class, "launch");
+        launch.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        launch.setCurrentAlert(8, CurrentUnit.AMPS);
+        launch.setVelocityPIDFCoefficients(24, 0.75, 1, 2.5);
+        for (int i = 0; i < poseMap.length;) {
+            if (gamepad1.dpad_up && !dpadUpPrev) {
+                poseMap[i] = true;
+                i++;
+            }
+            if (gamepad1.dpad_down && !dpadDownPrev) {
+                poseMap[i] = false;
+                i++;
+            }
+            dpadUpPrev = gamepad1.dpad_up;
+            dpadDownPrev = gamepad1.dpad_down;
+            telemetry.addData("bit 1", poseMap[0]);
+            telemetry.addData("bit 2", poseMap[1]);
+            telemetry.addData("bit 3", poseMap[2]);
+            telemetry.update();
+        }
+        Pose2d initPose = findPosition(poseMap);
+        MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
+        TrajectoryActionBuilder trajectoryAction = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40));
+        Action TrajectoryAction = trajectoryAction.build();
+        waitForStart();
+        launch.setVelocity(2280);
+        Actions.runBlocking(TrajectoryAction);
+        sleep(3000);
+        flip.setPosition(0.52);
+        sleep(1500);
+    }
+}
