@@ -1,7 +1,9 @@
 package org.firstinspires.ftc.teamcode.TeamOpModes;
 
+
+import androidx.annotation.NonNull;
+
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.MecanumKinematics;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
@@ -10,15 +12,37 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
-
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.jetbrains.annotations.Contract;
 
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
-    private Pose2d findPosition(boolean[] inputsTemp) {
+    private static class ReturnPair {
+        private int valueA;
+        private Pose2d valueB;
+        public int getValueA() {
+            return valueA;
+        }
+        ReturnPair(int valueA, Pose2d valueB) {
+            this.valueA = valueA;
+            this.valueB = valueB;
+
+        }
+        public void setValueA(int valueA) {
+            this.valueA = valueA;
+        }
+        public void setValueB(Pose2d valueB) {
+            this.valueB = valueB;
+        }
+        public Pose2d getValueB() {
+            return valueB;
+        }
+    }
+    @NonNull
+    @Contract("_ -> new")
+    private ReturnPair findPosition(@NonNull boolean[] inputsTemp) {
         int result = 0;
         boolean[] inputs = new boolean[inputsTemp.length];
         for (int i = 0; i < inputsTemp.length; i++) {
@@ -53,7 +77,7 @@ public class UnifiedAuto extends LinearOpMode {
                 startPose = new Pose2d(-60, 46, Math.toRadians(-50));
                 break;
         }
-        return startPose;
+        return new ReturnPair(result, startPose);
     }
 
     boolean[] poseMap = new boolean[3];
@@ -82,7 +106,7 @@ public class UnifiedAuto extends LinearOpMode {
             telemetry.addData("bit 3", poseMap[2]);
             telemetry.update();
         }
-        Pose2d initPose = findPosition(poseMap);
+        Pose2d initPose = findPosition(poseMap).getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
         TrajectoryActionBuilder trajectoryAction = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40));
         Action TrajectoryAction = trajectoryAction.build();
