@@ -25,11 +25,11 @@ import java.util.PrimitiveIterator;
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
     public static <T> ArrayList<T> addAndMoveRight(ArrayList<T> inputArray, int index, T thingToAdd) {
-        ArrayList<T> leftArray = (ArrayList<T>) inputArray.subList(0, index);
-        ArrayList<T> rightArray = (ArrayList<T>) inputArray.subList(index, inputArray.size());
-        leftArray.add(thingToAdd);
-        leftArray.addAll(rightArray);
-        return leftArray;
+        ArrayList<T> result = new ArrayList<>(inputArray.size() + 1);
+        result.addAll(inputArray.subList(0, index));
+        result.add(thingToAdd);
+        result.addAll(inputArray.subList(index, inputArray.size()));
+        return result;
     }
     private static class ReturnPair {
         private int valueA;
@@ -120,14 +120,17 @@ public class UnifiedAuto extends LinearOpMode {
         }
         Pose2d initPose = findPosition(poseMap).getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
-        ArrayList<TrajectoryActionBuilder> trajectoryArray = new ArrayList<TrajectoryActionBuilder>();
+        ArrayList<TrajectoryActionBuilder> trajectoryArray = new ArrayList<>();
         trajectoryArray.add(mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40)));
 
-        ArrayList<Action> actionsList = new ArrayList<Action>();
+        ArrayList<Action> actionsList = new ArrayList<>();
+        for (TrajectoryActionBuilder item : trajectoryArray) {
+            actionsList.add(item.build());
+        }
+        waitForStart();
 
         for (Action item : actionsList) {
             Actions.runBlocking(item);
         }
-        waitForStart();
     }
 }
