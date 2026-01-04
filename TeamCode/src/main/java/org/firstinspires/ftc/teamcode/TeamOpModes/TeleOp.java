@@ -38,7 +38,10 @@ public class TeleOp extends LinearOpMode {
     private List<Action> runningActions = new ArrayList<>();
     double prevTime = 0;
     double deltaTime = 0;
-    int driveID = 0;
+    int driveID = 1;
+    int spindexerIndex = 0;
+    boolean a2WasPressed = false;
+    String closeOrFar = "close";
     Vector2d PCDrivePowers(Pose2d pose, double gamepadx, double gamepady) {
 
         double heading = pose.heading.toDouble();
@@ -72,11 +75,12 @@ public class TeleOp extends LinearOpMode {
         DcMotorEx launch = hardwareMap.get(DcMotorEx.class, "launch");
         launch.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launch.setCurrentAlert(8, CurrentUnit.AMPS);
-        launch.setVelocityPIDFCoefficients(24, 0.75, 1, 2.5);
+        launch.setVelocityPIDFCoefficients(48, 0.8, 0.5, 1.5);
         DcMotor intake = hardwareMap.get(DcMotorEx.class, "intake");
         Servo flip = hardwareMap.get(Servo.class, "flip");
         flip.setDirection(Servo.Direction.REVERSE);
-        CRServo spindexer = hardwareMap.get(CRServo.class, "spindexer");
+        DcMotorEx spindexer = hardwareMap.get(DcMotorEx.class, "spindexer");
+        spindexer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         // Init limbo
         waitForStart();
@@ -106,6 +110,7 @@ public class TeleOp extends LinearOpMode {
                 mecanumDrive.localizer.setPose(new Pose2d(0, 0, Math.toRadians(-90)));
             }
 
+
             // Queue actions
             {
                 // Blue recenter && wind-up
@@ -114,7 +119,7 @@ public class TeleOp extends LinearOpMode {
                             .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135));
                     Action aimLeftClose = leftClose.build();
                     runningActions.add(aimLeftClose);
-                    launch.setVelocity(2300);
+                    launch.setVelocity(2260);
                 }
 
                 // Red recenter && wind-up
@@ -123,84 +128,81 @@ public class TeleOp extends LinearOpMode {
                             .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45));
                     Action aimRightClose = rightClose.build();
                     runningActions.add(aimRightClose);
+                    launch.setVelocity(2260);
+                }
+                if (gamepad1.dpad_left && (closeOrFar.equals("close")) && runningActions.isEmpty()) {
+                    TrajectoryActionBuilder rightClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                            .strafeToLinearHeading(new Vector2d(16, 60), Math.toRadians(106));
+                    Action aimRightClose = rightClose.build();
+                    runningActions.add(aimRightClose);
                     launch.setVelocity(2300);
                 }
             }
 
-            // Try catch block
-            try {
-                // Switch drive mode
-                if (runningActions.isEmpty()) {
-                    switch (driveID) {
 
-                        case 1:
+            // Switch drive mode
+            if (runningActions.isEmpty()) {
+                switch (driveID) {
 
-                            // Field centric
-                            double heading = mecanumDrive.localizer.getPose().heading.toDouble();
-                            mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                                    new Vector2d(
-                                            ((gamepad1.left_stick_y * java.lang.Math.sin(heading))
-                                                    - (gamepad1.left_stick_x * java.lang.Math.cos(heading))),
-                                            ((gamepad1.left_stick_y * java.lang.Math.cos(heading))
-                                                    + (gamepad1.left_stick_x * java.lang.Math.sin(heading)))
-                                    ),
-                                    -gamepad1.right_stick_x
-                            ));
-                            packet.put("DriveSystem is", "Field Centric");
-                            break;
+                    case 1:
 
-                        case 2:
-                            // Player centric
-                            mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                                    PCDrivePowers(
-                                            mecanumDrive.localizer.getPose(),
-                                            -gamepad1.left_stick_x,
-                                            -gamepad1.left_stick_y
-                                    ),
-                                    -gamepad1.right_stick_x
-                            ));
-                            packet.put("DriveSystem is", "Player Centric");
-                            break;
+                        // Field centric
+                        double heading = mecanumDrive.localizer.getPose().heading.toDouble();
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                new Vector2d(
+                                        ((gamepad1.left_stick_y * java.lang.Math.sin(heading))
+                                                - (gamepad1.left_stick_x * java.lang.Math.cos(heading))),
+                                        ((gamepad1.left_stick_y * java.lang.Math.cos(heading))
+                                                + (gamepad1.left_stick_x * java.lang.Math.sin(heading)))
+                                ),
+                                -gamepad1.right_stick_x
+                        ));
+                        packet.put("DriveSystem is", "Field Centric");
+                        break;
 
-                        default:
+                    case 2:
+                        // Player centric
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                PCDrivePowers(
+                                        mecanumDrive.localizer.getPose(),
+                                        -gamepad1.left_stick_x,
+                                        -gamepad1.left_stick_y
+                                ),
+                                -gamepad1.right_stick_x
+                        ));
+                        packet.put("DriveSystem is", "Player Centric");
+                        break;
 
-                            // Robot centric
-                            mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                                    new Vector2d(
-                                            -gamepad1.left_stick_y,
-                                            -gamepad1.left_stick_x
-                                    ),
-                                    -gamepad1.right_stick_x
-                            ));
-                            packet.put("DriveSystem is", "Robot Centric");
-                            break;
-                    }
-                }
-            } catch (RuntimeException e) {
-                // I couldn't explain this mess if I tried
-                try {
-                    mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                            new Vector2d(
-                                    0,
-                                    0
-                            ),
-                            0
-                    ));
-                    packet.put("Handled Exception in Drivetrain block.", "");
-                } catch (RuntimeException e2) {
-                    throw new DriveException("Unhandled Exception in Drivetrain block.", e2);
+                    case 3:
+
+                        // Robot centric
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                new Vector2d(
+                                        -gamepad1.left_stick_y,
+                                        -gamepad1.left_stick_x
+                                ),
+                                -gamepad1.right_stick_x
+                        ));
+                        packet.put("DriveSystem is", "Robot Centric");
+                        break;
+
+                    default:
+                        throw new DriveException("I have no clue how you did this");
                 }
             }
 
-            // Code to control the drive system switching
-            if (gamepad1.dpad_down) {
+            // Control drive system switching
+            if (gamepad1.dpad_right) {
                 driveID = 0;
             }
-            if (gamepad1.dpad_up) {
+            if (gamepad1.dpad_down) {
                 driveID = 1;
             }
             if (gamepad1.dpad_left) {
                 driveID = 2;
+            }
+            if (gamepad1.dpad_up) {
+                driveID = 3;
             }
 
             // Misc motors block
@@ -211,17 +213,24 @@ public class TeleOp extends LinearOpMode {
                 if (gamepad2.x) {
                     launch.setVelocity(2600);
                 }
+                if (gamepad2.a && !a2WasPressed) {
+                    spindexerIndex++;
+                    spindexer.setTargetPosition((int) Math.round(spindexerIndex * 1425.1 / 3));
+                    spindexer.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    spindexer.setPower(0.8);
+                }
+                a2WasPressed = gamepad2.a;
             }
 
             // Servo block
             {
-                if (gamepad2.a) {
-                    flip.setPosition(0.52);
+                if (gamepad2.y) {
+                    flip.setPosition(0.5);
                 } else {
                     flip.setPosition(0.1);
                 }
-                spindexer.setPower((gamepad2.right_stick_x / 5) + (gamepad2.left_stick_x / 5));
             }
+
 
             intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
 
@@ -233,6 +242,7 @@ public class TeleOp extends LinearOpMode {
             packet.fieldOverlay().setStroke("#3F51B5");
             Drawing.drawRobot(packet.fieldOverlay(), mecanumDrive.localizer.getPose());
             telemetry.addData("Velocity (ticks/sec)", launch.getVelocity());
+            telemetry.addData("Spindexer Index", spindexerIndex);
 
             // Send telemetry
             dash.sendTelemetryPacket(packet);

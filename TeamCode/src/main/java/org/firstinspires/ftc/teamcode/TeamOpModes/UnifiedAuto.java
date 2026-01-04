@@ -114,10 +114,15 @@ public class UnifiedAuto extends LinearOpMode {
             telemetry.addData("bit 3", poseMap[2]);
             telemetry.update();
         }
-        Pose2d initPose = findPosition(poseMap).getValueB();
+        ReturnPair startValues = findPosition(poseMap);
+        Pose2d initPose = startValues.getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
         ArrayList<TrajectoryActionBuilder> trajectoryArray = new ArrayList<>();
-        trajectoryArray.add(mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40)));
+        if (startValues.getValueA() >= 4) {
+            trajectoryArray.add(mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40)));
+        } else {
+            trajectoryArray.add(mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(40)));
+        }
 
         ArrayList<Action> actionsList = new ArrayList<>();
         for (TrajectoryActionBuilder item : trajectoryArray) {
