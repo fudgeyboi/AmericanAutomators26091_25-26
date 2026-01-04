@@ -17,8 +17,20 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.jetbrains.annotations.Contract;
 
+import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.GenericDeclaration;
+import java.util.ArrayList;
+import java.util.PrimitiveIterator;
+
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
+    public static <T> ArrayList<T> addAndMoveRight(ArrayList<T> inputArray, int index, T thingToAdd) {
+        ArrayList<T> leftArray = (ArrayList<T>) inputArray.subList(0, index);
+        ArrayList<T> rightArray = (ArrayList<T>) inputArray.subList(index, inputArray.size());
+        leftArray.add(thingToAdd);
+        leftArray.addAll(rightArray);
+        return leftArray;
+    }
     private static class ReturnPair {
         private int valueA;
         private Pose2d valueB;
@@ -108,13 +120,14 @@ public class UnifiedAuto extends LinearOpMode {
         }
         Pose2d initPose = findPosition(poseMap).getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
-        TrajectoryActionBuilder trajectoryAction = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40));
-        Action TrajectoryAction = trajectoryAction.build();
+        ArrayList<TrajectoryActionBuilder> trajectoryArray = new ArrayList<TrajectoryActionBuilder>();
+        trajectoryArray.add(mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40)));
+
+        ArrayList<Action> actionsList = new ArrayList<Action>();
+
+        for (Action item : actionsList) {
+            Actions.runBlocking(item);
+        }
         waitForStart();
-        launch.setVelocity(2280);
-        Actions.runBlocking(TrajectoryAction);
-        sleep(3000);
-        flip.setPosition(0.52);
-        sleep(1500);
     }
 }
