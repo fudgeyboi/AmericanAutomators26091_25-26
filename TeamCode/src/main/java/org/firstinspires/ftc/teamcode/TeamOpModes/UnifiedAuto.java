@@ -16,11 +16,7 @@ import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.jetbrains.annotations.Contract;
-
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.GenericDeclaration;
 import java.util.ArrayList;
-import java.util.PrimitiveIterator;
 
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
