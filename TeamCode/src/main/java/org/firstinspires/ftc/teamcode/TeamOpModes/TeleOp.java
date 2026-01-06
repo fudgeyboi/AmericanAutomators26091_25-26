@@ -34,6 +34,8 @@ import org.firstinspires.ftc.teamcode.DriveException;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
 public class TeleOp extends LinearOpMode {
+
+    // Declare and initialize global variables
     private FtcDashboard dash = FtcDashboard.getInstance();
     private List<Action> runningActions = new ArrayList<>();
     double prevTime = 0;
@@ -42,6 +44,8 @@ public class TeleOp extends LinearOpMode {
     int spindexerIndex = 0;
     boolean a2WasPressed = false;
     String closeOrFar = "close";
+
+    // FINALLY GOT PLAYER CENTRIC WORKING! WOOHOO!
     Vector2d PCDrivePowers(Pose2d pose, double gamepadx, double gamepady) {
 
         double heading = pose.heading.toDouble();
@@ -220,6 +224,7 @@ public class TeleOp extends LinearOpMode {
                     spindexer.setPower(0.8);
                 }
                 a2WasPressed = gamepad2.a;
+                intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
             }
 
             // Servo block
@@ -230,9 +235,6 @@ public class TeleOp extends LinearOpMode {
                     flip.setPosition(0.1);
                 }
             }
-
-
-            intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
 
             // Add data to telemetry
             deltaTime = runtime.milliseconds() - prevTime;
