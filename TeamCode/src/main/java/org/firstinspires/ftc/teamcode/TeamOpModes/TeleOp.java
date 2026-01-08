@@ -79,7 +79,7 @@ public class TeleOp extends LinearOpMode {
         DcMotorEx launch = hardwareMap.get(DcMotorEx.class, "launch");
         launch.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launch.setCurrentAlert(8, CurrentUnit.AMPS);
-        launch.setVelocityPIDFCoefficients(48, 0.8, 0.5, 1.5);
+        launch.setVelocityPIDFCoefficients(32, 2.5, 0.5, 1.5);
         DcMotor intake = hardwareMap.get(DcMotorEx.class, "intake");
         Servo flip = hardwareMap.get(Servo.class, "flip");
         flip.setDirection(Servo.Direction.REVERSE);
