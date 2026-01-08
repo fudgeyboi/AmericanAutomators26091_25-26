@@ -5,7 +5,6 @@ package org.firstinspires.ftc.teamcode.TeamOpModes;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 // Import hardware classes
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
@@ -29,6 +28,7 @@ import org.firstinspires.ftc.teamcode.Drawing;
 
 // Import custom classes
 import org.firstinspires.ftc.teamcode.DriveException;
+import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
 
 
 
@@ -38,6 +38,7 @@ public class TeleOp extends LinearOpMode {
     // Declare and initialize global variables
     private FtcDashboard dash = FtcDashboard.getInstance();
     private List<Action> runningActions = new ArrayList<>();
+    private List<Action> trajectoryActions = new ArrayList<>();
     double prevTime = 0;
     double deltaTime = 0;
     int driveID = 1;
@@ -76,15 +77,13 @@ public class TeleOp extends LinearOpMode {
         ElapsedTime runtime = new ElapsedTime();
 
         // Initialize hardware
-        DcMotorEx launch = hardwareMap.get(DcMotorEx.class, "launch");
-        launch.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        launch.setCurrentAlert(8, CurrentUnit.AMPS);
-        launch.setVelocityPIDFCoefficients(32, 2.5, 0.5, 1.5);
         DcMotor intake = hardwareMap.get(DcMotorEx.class, "intake");
-        Servo flip = hardwareMap.get(Servo.class, "flip");
-        flip.setDirection(Servo.Direction.REVERSE);
         DcMotorEx spindexer = hardwareMap.get(DcMotorEx.class, "spindexer");
         spindexer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        Launch launch = new Launch(hardwareMap, "launch");
+        Flip flip = new Flip(hardwareMap, "flip");
+
 
         // Init limbo
         waitForStart();
@@ -107,6 +106,13 @@ public class TeleOp extends LinearOpMode {
                 }
             }
             runningActions = newActions;
+            newActions = new ArrayList<>();
+            for (Action action : trajectoryActions) {
+                action.preview(packet.fieldOverlay());
+                if (action.run(packet)) {
+                    newActions.add(action);
+                }
+            }
 
             // Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
@@ -122,8 +128,8 @@ public class TeleOp extends LinearOpMode {
                     TrajectoryActionBuilder leftClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                             .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135));
                     Action aimLeftClose = leftClose.build();
-                    runningActions.add(aimLeftClose);
-                    launch.setVelocity(2260);
+                    trajectoryActions.add(aimLeftClose);
+                    runningActions.add(launch.launchAtSpeed(2260));
                 }
 
                 // Red recenter && wind-up
@@ -131,15 +137,15 @@ public class TeleOp extends LinearOpMode {
                     TrajectoryActionBuilder rightClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                             .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45));
                     Action aimRightClose = rightClose.build();
-                    runningActions.add(aimRightClose);
-                    launch.setVelocity(2260);
+                    trajectoryActions.add(aimRightClose);
+                    runningActions.add(launch.launchAtSpeed(2260));
                 }
                 if (gamepad1.dpad_left && (closeOrFar.equals("close")) && runningActions.isEmpty()) {
                     TrajectoryActionBuilder rightClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                             .strafeToLinearHeading(new Vector2d(16, 60), Math.toRadians(106));
                     Action aimRightClose = rightClose.build();
-                    runningActions.add(aimRightClose);
-                    launch.setVelocity(2300);
+                    trajectoryActions.add(aimRightClose);
+                    runningActions.add(launch.launchAtSpeed(2300));
                 }
             }
 
@@ -189,39 +195,64 @@ public class TeleOp extends LinearOpMode {
                         ));
                         packet.put("DriveSystem is", "Robot Centric");
                         break;
-
                     default:
                         throw new DriveException("I have no clue how you did this");
                 }
             }
 
             // Control drive system switching
-            if (gamepad1.dpad_right) {
-                driveID = 0;
+            if (gamepad1.dpad_up) {
+                closeOrFar = "far";
             }
             if (gamepad1.dpad_down) {
-                driveID = 1;
+                closeOrFar = "close";
             }
             if (gamepad1.dpad_left) {
-                driveID = 2;
+                switch(closeOrFar) {
+                    case "close":
+                        launch.launchAtSpeed(2300);
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135))
+                                .build());
+                        break;
+                    case "far":
+                        launch.launchAtSpeed(2600);
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(135))
+                                .build());
+                        break;
+                }
             }
-            if (gamepad1.dpad_up) {
-                driveID = 3;
+            if (gamepad1.dpad_right) {
+                switch(closeOrFar) {
+                    case "close":
+                        launch.launchAtSpeed(2300);
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
+                                .build());
+                        break;
+                    case "far":
+                        launch.launchAtSpeed(2600);
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(45))
+                                .build());
+                        break;
+                }
             }
 
             // Misc motors block
             {
                 if (gamepad2.b) {
-                    launch.setVelocity(0);
+                    runningActions.add(launch.stopLauncher());
                 }
                 if (gamepad2.x) {
-                    launch.setVelocity(2600);
+                    runningActions.add(launch.launchAtSpeed(2600));
                 }
                 if (gamepad2.a && !a2WasPressed) {
                     spindexerIndex++;
                     spindexer.setTargetPosition((int) Math.round(spindexerIndex * 1425.1 / 3));
                     spindexer.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    spindexer.setPower(0.8);
+                    spindexer.setPower(1);
                 }
                 a2WasPressed = gamepad2.a;
                 intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
@@ -230,9 +261,9 @@ public class TeleOp extends LinearOpMode {
             // Servo block
             {
                 if (gamepad2.y) {
-                    flip.setPosition(0.5);
+                    flip.flipUp();
                 } else {
-                    flip.setPosition(0.1);
+                    flip.flipDown();
                 }
             }
 
@@ -240,10 +271,8 @@ public class TeleOp extends LinearOpMode {
             deltaTime = runtime.milliseconds() - prevTime;
             prevTime = runtime.milliseconds();
             packet.put("Tick time (ms)", deltaTime);
-            packet.put("Shooter velocity (ticks/sec)", launch.getVelocity());
             packet.fieldOverlay().setStroke("#3F51B5");
             Drawing.drawRobot(packet.fieldOverlay(), mecanumDrive.localizer.getPose());
-            telemetry.addData("Velocity (ticks/sec)", launch.getVelocity());
             telemetry.addData("Spindexer Index", spindexerIndex);
 
             // Send telemetry

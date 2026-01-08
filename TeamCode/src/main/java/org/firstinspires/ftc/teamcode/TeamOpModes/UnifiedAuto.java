@@ -4,13 +4,10 @@ package org.firstinspires.ftc.teamcode.TeamOpModes;
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.NullAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
-import com.acmerobotics.roadrunner.Trajectory;
-import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -20,7 +17,7 @@ import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.jetbrains.annotations.Contract;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Objects;
+import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
 
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
@@ -35,12 +32,16 @@ public class UnifiedAuto extends LinearOpMode {
     }
 
     // Helping myself out by returning a bit more data from findPosition()
-    private static class ReturnPair {
+    static class ReturnPair {
 
         // Public constructor
         public ReturnPair(int valueA, Pose2d valueB) {
             this.valueA = valueA;
             this.valueB = valueB;
+        }
+        public ReturnPair() {
+            this.valueA = 0;
+            this.valueB = new Pose2d(0, 0, 0);
         }
 
         private int valueA;
@@ -125,11 +126,11 @@ public class UnifiedAuto extends LinearOpMode {
         int i = 0;
 
         // Initialize hardware
-        ActionConfig.Flip flip = new ActionConfig.Flip(hardwareMap, "flip");
-        ActionConfig.Launch launch = new ActionConfig.Launch(hardwareMap, "launch");
+        Flip flip = new Flip(hardwareMap, "flip");
+        Launch launch = new Launch(hardwareMap, "launch");
 
         // Get an array of 3 binary numbers that signify where we start
-        while (i < poseMap.size()) {
+        while (i < poseMap.size() && !isStopRequested()) {
             if (gamepad1.dpad_up && !dpadUpPrev) {
                 poseMap.set(i, true);
                 i++;
@@ -154,9 +155,13 @@ public class UnifiedAuto extends LinearOpMode {
         Action traj1;
         // Add trajectories to the ArrayList
         if (startValues.getValueA() >= 4) {
-            traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40)).build();
+            traj1 = mecanumDrive.actionBuilder(initPose)
+                    .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40))
+                    .build();
         } else {
-            traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(40)).build();
+            traj1 = mecanumDrive.actionBuilder(initPose)
+                    .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(40))
+                    .build();
         }
 
         // Init limbo
@@ -164,12 +169,10 @@ public class UnifiedAuto extends LinearOpMode {
 
         // Run each action sequentially
         Actions.runBlocking(new SequentialAction(
-                new ParallelAction(
-                        traj1,
-                        launch.launchAtSpeed(2240)
-                ),
+                launch.launchAtSpeed(2240),
+                traj1,
                 flip.flipUp(),
-                new SleepAction(2)
+                new SleepAction(1)
         ));
     }
 }

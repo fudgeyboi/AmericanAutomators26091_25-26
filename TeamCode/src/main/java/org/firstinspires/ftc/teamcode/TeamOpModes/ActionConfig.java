@@ -21,25 +21,14 @@ public class ActionConfig {
         public Flip(HardwareMap hardwareMap, String servoName) {
             flipServo = hardwareMap.get(Servo.class, servoName);
             flipServo.setDirection(Servo.Direction.REVERSE);
-            flipServo.setPosition(retractedValue);
         }
         public Action flipUp() {
-            return new Action() {
-                @Override
-                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
-                    flipServo.setPosition(extendedValue);
-                    return false;
-                }
-            };
+            flipServo.setPosition(extendedValue);
+            return packet -> false;
         }
         public Action flipDown() {
-            return new Action() {
-                @Override
-                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
-                    flipServo.setPosition(retractedValue);
-                    return false;
-                }
-            };
+            flipServo.setPosition(retractedValue);
+            return packet -> false;
         }
     }
     public static class Launch {
@@ -67,7 +56,7 @@ public class ActionConfig {
                     }
 
                     double vel = launchMotor.getVelocity();
-                    telemetryPacket.put("Shooter velocity is", vel);
+                    telemetryPacket.put("Shooter velocity", vel);
                     return vel < (launchSpeed * 0.95);
                 }
             };
@@ -83,10 +72,14 @@ public class ActionConfig {
                     }
 
                     double vel = launchMotor.getVelocity();
-                    telemetryPacket.put("Shooter velocity is", vel);
+                    telemetryPacket.put("Shooter velocity", vel);
                     return vel < (Launch.this.launchSpeed * 0.95);
                 }
             };
+        }
+        public Action stopLauncher() {
+            launchMotor.setVelocity(0);
+            return packet -> false;
         }
     }
 }
