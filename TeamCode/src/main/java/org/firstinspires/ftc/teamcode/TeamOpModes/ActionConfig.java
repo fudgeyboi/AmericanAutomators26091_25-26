@@ -48,8 +48,11 @@ public class ActionConfig {
             launchMotor = hardwareMap.get(DcMotorEx.class, motorName);
             launchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             launchMotor.setCurrentAlert(8, CurrentUnit.AMPS);
-            launchMotor.setVelocityPIDFCoefficients(32, 2.5, 0.5, 1.5);
+            launchMotor.setVelocityPIDFCoefficients(32, 0, 1, 16);
             launchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        }
+        public double getLaunchSpeed() {
+            return launchMotor.getVelocity();
         }
         public Action setLaunchSpeed(int launchSpeed) {
             return new Action() {
@@ -72,7 +75,7 @@ public class ActionConfig {
 
                     double vel = launchMotor.getVelocity();
                     telemetryPacket.put("Shooter velocity", vel);
-                    return vel < (launchSpeed * 0.95);
+                    return vel < (launchSpeed * 0.975);
                 }
             };
         }
@@ -88,16 +91,23 @@ public class ActionConfig {
 
                     double vel = launchMotor.getVelocity();
                     telemetryPacket.put("Shooter velocity", vel);
-                    return vel < (Launch.this.launchSpeed * 0.95);
+                    return vel < (Launch.this.launchSpeed * 0.975);
                 }
             };
         }
         public Action stopLauncher() {
             return new Action() {
+                private boolean initialized = false;
                 @Override
                 public boolean run(@NonNull TelemetryPacket telemetryPacket) {
-                    launchMotor.setVelocity(0);
-                    return false;
+                    if (!initialized) {
+                        launchMotor.setVelocity(Launch.this.launchSpeed);
+                        initialized = true;
+                    }
+
+                    double vel = launchMotor.getVelocity();
+                    telemetryPacket.put("Shooter velocity", vel);
+                    return vel > 100;
                 }
             };
         }
@@ -107,14 +117,28 @@ public class ActionConfig {
         private int index = 0;
         private final DcMotorEx spindexerMotor;
         public Spindexer(HardwareMap hardwareMap, String motorName) {
-            spindexerMotor = hardwareMap.get(DcMotorEx.class, "spindexer");
+            spindexerMotor = hardwareMap.get(DcMotorEx.class, motorName);
             spindexerMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            spindexerMotor.setTargetPosition(0);
+            spindexerMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            spindexerMotor.setPower(1);
         }
-        public Action spinOnce() {
+        public Action spindex() {
             return new Action() {
                 @Override
                 public boolean run(@NonNull TelemetryPacket telemetryPacket) {
                     index++;
+                    spindexerMotor.setTargetPosition((int) Math.round(index * 1425.1 / 3));
+                    spindexerMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    return false;
+                }
+            };
+        }
+        public Action spindex(int timesToSpin) {
+            return new Action() {
+                @Override
+                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                    index += timesToSpin;
                     spindexerMotor.setTargetPosition((int) Math.round(index * 1425.1 / 3));
                     spindexerMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                     return false;

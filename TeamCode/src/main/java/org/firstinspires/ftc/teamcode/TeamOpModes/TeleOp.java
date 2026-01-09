@@ -7,12 +7,11 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 // Import hardware classes
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 
 // Import computing libraries
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 // Import RoadRunner classes + dependencies
@@ -20,7 +19,6 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -29,8 +27,6 @@ import org.firstinspires.ftc.teamcode.Drawing;
 // Import custom classes
 import org.firstinspires.ftc.teamcode.DriveException;
 import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
-
-
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
 public class TeleOp extends LinearOpMode {
@@ -98,20 +94,32 @@ public class TeleOp extends LinearOpMode {
 
             // Update running actions
             List<Action> newActions = new ArrayList<>();
-            for (Action action : runningActions) {
+            Iterator<Action> iterator = runningActions.iterator();
+            while (iterator.hasNext()) {
+                Action action = iterator.next();
                 action.preview(packet.fieldOverlay());
+
                 if (action.run(packet)) {
                     newActions.add(action);
+                } else {
+                    iterator.remove();
                 }
             }
+
             runningActions = newActions;
             newActions = new ArrayList<>();
-            for (Action action : trajectoryActions) {
+            iterator = trajectoryActions.iterator();
+            while (iterator.hasNext()) {
+                Action action = iterator.next();
                 action.preview(packet.fieldOverlay());
+
                 if (action.run(packet)) {
                     newActions.add(action);
+                } else {
+                    iterator.remove();
                 }
             }
+
 
             // Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
@@ -130,13 +138,13 @@ public class TeleOp extends LinearOpMode {
             if (gamepad1.dpad_left) {
                 switch(closeOrFar) {
                     case "close":
-                        runningActions.add(launch.launchAtSpeed(2300));
+                        runningActions.add(launch.launchAtSpeed(2060));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135))
                                 .build());
                         break;
                     case "far":
-                        runningActions.add(launch.launchAtSpeed(2600));
+                        runningActions.add(launch.launchAtSpeed(2120));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .strafeToLinearHeading(new Vector2d(0, 48), Math.toRadians(110))
                                 .build());
@@ -146,18 +154,21 @@ public class TeleOp extends LinearOpMode {
             if (gamepad1.dpad_right) {
                 switch(closeOrFar) {
                     case "close":
-                        runningActions.add(launch.launchAtSpeed(2300));
+                        runningActions.add(launch.launchAtSpeed(2060));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
                                 .build());
                         break;
                     case "far":
-                        runningActions.add(launch.launchAtSpeed(2600));
+                        runningActions.add(launch.launchAtSpeed(2120));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .strafeToLinearHeading(new Vector2d(0, 48), Math.toRadians(70))
                                 .build());
                         break;
                 }
+            }
+            if (gamepad1.b) {
+                trajectoryActions = new ArrayList<>();
             }
 
             // Switch drive mode
@@ -218,11 +229,8 @@ public class TeleOp extends LinearOpMode {
                 if (gamepad2.b) {
                     runningActions.add(launch.stopLauncher());
                 }
-                if (gamepad2.x) {
-                    runningActions.add(launch.launchAtSpeed(2600));
-                }
                 if (gamepad2.a && !a2WasPressed) {
-                    runningActions.add(spindexer.spinOnce());
+                    runningActions.add(spindexer.spindex());
                 }
                 a2WasPressed = gamepad2.a;
                 intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
@@ -241,9 +249,11 @@ public class TeleOp extends LinearOpMode {
             deltaTime = runtime.milliseconds() - prevTime;
             prevTime = runtime.milliseconds();
             packet.put("Tick time (ms)", deltaTime);
+            telemetry.addData("Tick time (ms)", deltaTime);
+            packet.put("Shooter velocity", launch.getLaunchSpeed());
+            telemetry.addData("Shooter velocity: ", launch.getLaunchSpeed());
             packet.fieldOverlay().setStroke("#3F51B5");
             Drawing.drawRobot(packet.fieldOverlay(), mecanumDrive.localizer.getPose());
-            telemetry.addData("Spindexer Index", spindexerIndex);
 
             // Send telemetry
             dash.sendTelemetryPacket(packet);

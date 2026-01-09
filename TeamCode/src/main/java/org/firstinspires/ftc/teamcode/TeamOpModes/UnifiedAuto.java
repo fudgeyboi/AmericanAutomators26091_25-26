@@ -12,6 +12,7 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.jetbrains.annotations.Contract;
@@ -22,7 +23,6 @@ import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
 
-    // I don't know why it doesn't have this already, but we do now!
     public static <T> ArrayList<T> addAndMoveRight(ArrayList<T> inputArray, int index, T thingToAdd) {
         ArrayList<T> result = new ArrayList<>(inputArray.size() + 1);
         result.addAll(inputArray.subList(0, index));
@@ -33,8 +33,10 @@ public class UnifiedAuto extends LinearOpMode {
 
     // Helping myself out by returning a bit more data from findPosition()
     static class ReturnPair {
+        private int valueA;
+        private Pose2d valueB;
 
-        // Public constructor
+        // Public constructors
         public ReturnPair(int valueA, Pose2d valueB) {
             this.valueA = valueA;
             this.valueB = valueB;
@@ -43,9 +45,6 @@ public class UnifiedAuto extends LinearOpMode {
             this.valueA = 0;
             this.valueB = new Pose2d(0, 0, 0);
         }
-
-        private int valueA;
-        private Pose2d valueB;
 
         // Public helpers
         public int getValueA() {
@@ -62,6 +61,7 @@ public class UnifiedAuto extends LinearOpMode {
         }
     }
 
+    // I don't understand why this isn't in the ArrayList class by default. It's inefficient, but it works.
     public static <T> ArrayList<T> reverseList(ArrayList<T> input) {
         ArrayList<T> result = new ArrayList<>(input.size());
         for (int i = input.size() - 1; i >= 0; i--) {
@@ -89,22 +89,22 @@ public class UnifiedAuto extends LinearOpMode {
         // Actually find the damn pose
         switch (result) {
             case 0:
-                startPose = new Pose2d(64, -14, Math.toRadians(180));
+                startPose = new Pose2d(64, -12, Math.toRadians(180));
                 break;
             case 1:
-                startPose = new Pose2d(64, -32, Math.toRadians(180));
+                startPose = new Pose2d(64, -28, Math.toRadians(180));
                 break;
             case 2:
-                startPose = new Pose2d(-36, -48, Math.toRadians(90));
+                startPose = new Pose2d(-44, -54, Math.toRadians(90));
                 break;
             case 3:
-                startPose = new Pose2d(-64, -32, Math.toRadians(0));
+                startPose = new Pose2d(-64, -36, Math.toRadians(0));
                 break;
             case 4:
                 startPose = new Pose2d(60, 12, Math.toRadians(-40));
                 break;
             case 5:
-                startPose = new Pose2d(-40, 56, Math.toRadians(-90));
+                startPose = new Pose2d(-36, 60, Math.toRadians(-90));
                 break;
             case 6:
                 startPose = new Pose2d(-60, 46, Math.toRadians(-50));
@@ -129,6 +129,7 @@ public class UnifiedAuto extends LinearOpMode {
         Flip flip = new Flip(hardwareMap, "flip");
         Launch launch = new Launch(hardwareMap, "launch");
         Spindexer spindexer = new Spindexer(hardwareMap, "spindexer");
+        DcMotor intake = hardwareMap.get(DcMotor.class, "intake");
 
         // Get an array of 3 binary numbers that signify where we start
         while (i < poseMap.size() && !isStopRequested()) {
@@ -154,33 +155,56 @@ public class UnifiedAuto extends LinearOpMode {
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
         Action traj1;
-        if (startValues.getValueA() >= 4) {
-            traj1 = mecanumDrive.actionBuilder(initPose)
-                    .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40))
-                    .build();
-        } else {
-            traj1 = mecanumDrive.actionBuilder(initPose)
-                    .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(40))
-                    .build();
+        int launchSpeed = 2120;
+        switch (startValues.getValueA()) {
+            case 0:
+            case 1:
+                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(44, 0), Math.toRadians(25)).build();
+                break;
+            case 2:
+            case 3:
+                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(0, 0), Math.toRadians(40)).build();
+                launchSpeed = 2060;
+                break;
+            case 4:
+                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(44, 0), Math.toRadians(-25)).build();
+                break;
+            case 5:
+            case 6:
+                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(0, 0), Math.toRadians(-45)).build();
+                launchSpeed = 2060;
+                break;
+            default:
+                throw new RuntimeException("How did you get this far without throwing another exception?");
         }
 
         // Init limbo
         waitForStart();
 
+        // Start spintake
+        intake.setPower(1);
+
         // Run each action sequentially
         Actions.runBlocking(
                 new SequentialAction(
                         new ParallelAction(
-                        launch.launchAtSpeed(2100),
+                        launch.launchAtSpeed(launchSpeed),
                         traj1
                         ),
                         flip.flipUp(),
-                        new ParallelAction(
-                                new SleepAction(1),
-                                spindexer.spinOnce(),
-                                launch.launchAtSpeed(2100)
-                        ),
-                        flip.flipUp()
+                        new SleepAction(0.6),
+                        flip.flipDown(),
+                        new SleepAction(0.6),
+                        spindexer.spindex(),
+                        new SleepAction(0.6),
+                        flip.flipUp(),
+                        new SleepAction(0.6),
+                        flip.flipDown(),
+                        new SleepAction(0.6),
+                        spindexer.spindex(),
+                        new SleepAction(0.6),
+                        flip.flipUp(),
+                        new SleepAction(0.6)
                 ));
     }
 }
