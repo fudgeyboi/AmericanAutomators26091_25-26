@@ -23,12 +23,22 @@ public class ActionConfig {
             flipServo.setDirection(Servo.Direction.REVERSE);
         }
         public Action flipUp() {
-            flipServo.setPosition(extendedValue);
-            return packet -> false;
+            return new Action() {
+                @Override
+                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                    flipServo.setPosition(extendedValue);
+                    return false;
+                }
+            };
         }
         public Action flipDown() {
-            flipServo.setPosition(retractedValue);
-            return packet -> false;
+            return new Action() {
+                @Override
+                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                    flipServo.setPosition(retractedValue);
+                    return false;
+                }
+            };
         }
     }
     public static class Launch {
@@ -42,8 +52,13 @@ public class ActionConfig {
             launchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
         public Action setLaunchSpeed(int launchSpeed) {
-            this.launchSpeed = launchSpeed;
-            return packet -> false;
+            return new Action() {
+                @Override
+                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                    Launch.this.launchSpeed = launchSpeed;
+                    return false;
+                }
+            };
         }
         public Action launchAtSpeed(int launchSpeed) {
             return new Action() {
@@ -78,8 +93,33 @@ public class ActionConfig {
             };
         }
         public Action stopLauncher() {
-            launchMotor.setVelocity(0);
-            return packet -> false;
+            return new Action() {
+                @Override
+                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                    launchMotor.setVelocity(0);
+                    return false;
+                }
+            };
+        }
+    }
+
+    public static class Spindexer {
+        private int index = 0;
+        private final DcMotorEx spindexerMotor;
+        public Spindexer(HardwareMap hardwareMap, String motorName) {
+            spindexerMotor = hardwareMap.get(DcMotorEx.class, "spindexer");
+            spindexerMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        }
+        public Action spinOnce() {
+            return new Action() {
+                @Override
+                public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                    index++;
+                    spindexerMotor.setTargetPosition((int) Math.round(index * 1425.1 / 3));
+                    spindexerMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                    return false;
+                }
+            };
         }
     }
 }

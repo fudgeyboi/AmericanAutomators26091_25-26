@@ -67,7 +67,7 @@ public class TeleOp extends LinearOpMode {
         return powerVec;
     }
     @Override
-    public void runOpMode() throws InterruptedException {
+    public void runOpMode() {
 
         // Initialize RoadRunner
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(-90));
@@ -78,11 +78,10 @@ public class TeleOp extends LinearOpMode {
 
         // Initialize hardware
         DcMotor intake = hardwareMap.get(DcMotorEx.class, "intake");
-        DcMotorEx spindexer = hardwareMap.get(DcMotorEx.class, "spindexer");
-        spindexer.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         Launch launch = new Launch(hardwareMap, "launch");
         Flip flip = new Flip(hardwareMap, "flip");
+        Spindexer spindexer = new Spindexer(hardwareMap, "spindexer");
 
 
         // Init limbo
@@ -122,36 +121,47 @@ public class TeleOp extends LinearOpMode {
 
 
             // Queue actions
-            {
-                // Blue recenter && wind-up
-                if (gamepad1.x && runningActions.isEmpty()) {
-                    TrajectoryActionBuilder leftClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                            .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135));
-                    Action aimLeftClose = leftClose.build();
-                    trajectoryActions.add(aimLeftClose);
-                    runningActions.add(launch.launchAtSpeed(2260));
+            if (gamepad1.dpad_up) {
+                closeOrFar = "close";
+            }
+            if (gamepad1.dpad_down) {
+                closeOrFar = "far";
+            }
+            if (gamepad1.dpad_left) {
+                switch(closeOrFar) {
+                    case "close":
+                        runningActions.add(launch.launchAtSpeed(2300));
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135))
+                                .build());
+                        break;
+                    case "far":
+                        runningActions.add(launch.launchAtSpeed(2600));
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(0, 48), Math.toRadians(110))
+                                .build());
+                        break;
                 }
-
-                // Red recenter && wind-up
-                if (gamepad1.b && runningActions.isEmpty()) {
-                    TrajectoryActionBuilder rightClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                            .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45));
-                    Action aimRightClose = rightClose.build();
-                    trajectoryActions.add(aimRightClose);
-                    runningActions.add(launch.launchAtSpeed(2260));
-                }
-                if (gamepad1.dpad_left && (closeOrFar.equals("close")) && runningActions.isEmpty()) {
-                    TrajectoryActionBuilder rightClose = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                            .strafeToLinearHeading(new Vector2d(16, 60), Math.toRadians(106));
-                    Action aimRightClose = rightClose.build();
-                    trajectoryActions.add(aimRightClose);
-                    runningActions.add(launch.launchAtSpeed(2300));
+            }
+            if (gamepad1.dpad_right) {
+                switch(closeOrFar) {
+                    case "close":
+                        runningActions.add(launch.launchAtSpeed(2300));
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
+                                .build());
+                        break;
+                    case "far":
+                        runningActions.add(launch.launchAtSpeed(2600));
+                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                                .strafeToLinearHeading(new Vector2d(0, 48), Math.toRadians(70))
+                                .build());
+                        break;
                 }
             }
 
-
             // Switch drive mode
-            if (runningActions.isEmpty()) {
+            if (trajectoryActions.isEmpty()) {
                 switch (driveID) {
 
                     case 1:
@@ -201,44 +211,7 @@ public class TeleOp extends LinearOpMode {
             }
 
             // Control drive system switching
-            if (gamepad1.dpad_up) {
-                closeOrFar = "far";
-            }
-            if (gamepad1.dpad_down) {
-                closeOrFar = "close";
-            }
-            if (gamepad1.dpad_left) {
-                switch(closeOrFar) {
-                    case "close":
-                        launch.launchAtSpeed(2300);
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135))
-                                .build());
-                        break;
-                    case "far":
-                        launch.launchAtSpeed(2600);
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(135))
-                                .build());
-                        break;
-                }
-            }
-            if (gamepad1.dpad_right) {
-                switch(closeOrFar) {
-                    case "close":
-                        launch.launchAtSpeed(2300);
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
-                                .build());
-                        break;
-                    case "far":
-                        launch.launchAtSpeed(2600);
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(45))
-                                .build());
-                        break;
-                }
-            }
+            // (not implemented)
 
             // Misc motors block
             {
@@ -249,10 +222,7 @@ public class TeleOp extends LinearOpMode {
                     runningActions.add(launch.launchAtSpeed(2600));
                 }
                 if (gamepad2.a && !a2WasPressed) {
-                    spindexerIndex++;
-                    spindexer.setTargetPosition((int) Math.round(spindexerIndex * 1425.1 / 3));
-                    spindexer.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    spindexer.setPower(1);
+                    runningActions.add(spindexer.spinOnce());
                 }
                 a2WasPressed = gamepad2.a;
                 intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
@@ -261,9 +231,9 @@ public class TeleOp extends LinearOpMode {
             // Servo block
             {
                 if (gamepad2.y) {
-                    flip.flipUp();
+                    runningActions.add(flip.flipUp());
                 } else {
-                    flip.flipDown();
+                    runningActions.add(flip.flipDown());
                 }
             }
 

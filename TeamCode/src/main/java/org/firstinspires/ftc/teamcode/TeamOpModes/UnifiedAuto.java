@@ -121,13 +121,14 @@ public class UnifiedAuto extends LinearOpMode {
     boolean dpadUpPrev = false;
 
 
-    public void runOpMode() throws InterruptedException {
+    public void runOpMode() {
         // Initialize variables
         int i = 0;
 
         // Initialize hardware
         Flip flip = new Flip(hardwareMap, "flip");
         Launch launch = new Launch(hardwareMap, "launch");
+        Spindexer spindexer = new Spindexer(hardwareMap, "spindexer");
 
         // Get an array of 3 binary numbers that signify where we start
         while (i < poseMap.size() && !isStopRequested()) {
@@ -153,7 +154,6 @@ public class UnifiedAuto extends LinearOpMode {
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
         Action traj1;
-        // Add trajectories to the ArrayList
         if (startValues.getValueA() >= 4) {
             traj1 = mecanumDrive.actionBuilder(initPose)
                     .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-40))
@@ -168,11 +168,19 @@ public class UnifiedAuto extends LinearOpMode {
         waitForStart();
 
         // Run each action sequentially
-        Actions.runBlocking(new SequentialAction(
-                launch.launchAtSpeed(2240),
-                traj1,
-                flip.flipUp(),
-                new SleepAction(1)
-        ));
+        Actions.runBlocking(
+                new SequentialAction(
+                        new ParallelAction(
+                        launch.launchAtSpeed(2100),
+                        traj1
+                        ),
+                        flip.flipUp(),
+                        new ParallelAction(
+                                new SleepAction(1),
+                                spindexer.spinOnce(),
+                                launch.launchAtSpeed(2100)
+                        ),
+                        flip.flipUp()
+                ));
     }
 }
