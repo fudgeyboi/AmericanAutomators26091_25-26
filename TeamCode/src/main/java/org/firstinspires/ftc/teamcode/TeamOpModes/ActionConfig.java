@@ -48,7 +48,7 @@ public class ActionConfig {
             launchMotor = hardwareMap.get(DcMotorEx.class, motorName);
             launchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
             launchMotor.setCurrentAlert(8, CurrentUnit.AMPS);
-            launchMotor.setVelocityPIDFCoefficients(32, 0, 1, 16);
+            launchMotor.setVelocityPIDFCoefficients(32, 1, 2, 16);
             launchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
         public double getLaunchSpeed() {

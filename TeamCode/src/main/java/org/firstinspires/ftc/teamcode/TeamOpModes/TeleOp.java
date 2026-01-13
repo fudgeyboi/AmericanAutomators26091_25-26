@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 // Import computing libraries
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -21,6 +22,8 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+
+import org.firstinspires.ftc.robotcontroller.internal.FtcRobotControllerActivity;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.Drawing;
 
@@ -37,10 +40,10 @@ public class TeleOp extends LinearOpMode {
     private List<Action> trajectoryActions = new ArrayList<>();
     double prevTime = 0;
     double deltaTime = 0;
-    int driveID = 1;
-    int spindexerIndex = 0;
+    int driveID = 3;
     boolean a2WasPressed = false;
     String closeOrFar = "close";
+    boolean yWasPressed = false;
 
     // FINALLY GOT PLAYER CENTRIC WORKING! WOOHOO!
     Vector2d PCDrivePowers(Pose2d pose, double gamepadx, double gamepady) {
@@ -49,7 +52,7 @@ public class TeleOp extends LinearOpMode {
         double x = pose.position.x;
         double y = pose.position.y;
 
-        double theta = Math.atan2(x + 48, y - 96);
+        double theta = Math.atan2(x - 96, y - 48);
 
         Vector2d powerVec = new Vector2d(
                 ((gamepady * java.lang.Math.sin(theta + heading))
@@ -66,8 +69,14 @@ public class TeleOp extends LinearOpMode {
     public void runOpMode() {
 
         // Initialize RoadRunner
-        Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(-90));
+        Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(180));
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initialPose);
+        try {
+            Pose2d pose = mecanumDrive.readPoseFromDisk("xFile.txt", "yFile.txt", "hFile.txt");
+            mecanumDrive.localizer.setPose(pose);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
 
         // Create stopwatch
         ElapsedTime runtime = new ElapsedTime();
@@ -123,9 +132,15 @@ public class TeleOp extends LinearOpMode {
 
             // Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
-            if (gamepad1.y) {
-                mecanumDrive.localizer.setPose(new Pose2d(0, 0, Math.toRadians(-90)));
+            if (gamepad1.y && !yWasPressed) {
+                mecanumDrive.localizer.setPose(new Pose2d(0, 0, Math.toRadians(180)));
+                try {
+                    mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
+                } catch (FileNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
             }
+            yWasPressed = gamepad1.y;
 
 
             // Queue actions
@@ -140,13 +155,13 @@ public class TeleOp extends LinearOpMode {
                     case "close":
                         runningActions.add(launch.launchAtSpeed(2060));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(135))
+                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
                                 .build());
                         break;
                     case "far":
                         runningActions.add(launch.launchAtSpeed(2120));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 48), Math.toRadians(110))
+                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(25))
                                 .build());
                         break;
                 }
@@ -156,13 +171,13 @@ public class TeleOp extends LinearOpMode {
                     case "close":
                         runningActions.add(launch.launchAtSpeed(2060));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
+                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-45))
                                 .build());
                         break;
                     case "far":
                         runningActions.add(launch.launchAtSpeed(2120));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 48), Math.toRadians(70))
+                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(-25))
                                 .build());
                         break;
                 }
@@ -176,6 +191,19 @@ public class TeleOp extends LinearOpMode {
                 switch (driveID) {
 
                     case 1:
+
+                        // Robot centric
+                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
+                                new Vector2d(
+                                        -gamepad1.left_stick_y,
+                                        -gamepad1.left_stick_x
+                                ),
+                                -gamepad1.right_stick_x
+                        ));
+                        packet.put("DriveSystem is", "Robot Centric");
+                        break;
+
+                    case 2:
 
                         // Field centric
                         double heading = mecanumDrive.localizer.getPose().heading.toDouble();
@@ -191,7 +219,8 @@ public class TeleOp extends LinearOpMode {
                         packet.put("DriveSystem is", "Field Centric");
                         break;
 
-                    case 2:
+                    case 3:
+
                         // Player centric
                         mecanumDrive.setDrivePowers(new PoseVelocity2d(
                                 PCDrivePowers(
@@ -204,18 +233,6 @@ public class TeleOp extends LinearOpMode {
                         packet.put("DriveSystem is", "Player Centric");
                         break;
 
-                    case 3:
-
-                        // Robot centric
-                        mecanumDrive.setDrivePowers(new PoseVelocity2d(
-                                new Vector2d(
-                                        -gamepad1.left_stick_y,
-                                        -gamepad1.left_stick_x
-                                ),
-                                -gamepad1.right_stick_x
-                        ));
-                        packet.put("DriveSystem is", "Robot Centric");
-                        break;
                     default:
                         throw new DriveException("I have no clue how you did this");
                 }
@@ -258,6 +275,11 @@ public class TeleOp extends LinearOpMode {
             // Send telemetry
             dash.sendTelemetryPacket(packet);
             telemetry.update();
+        }
+        try {
+            mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
         }
     }
 }

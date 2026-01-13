@@ -1,6 +1,10 @@
 package org.firstinspires.ftc.teamcode.TeamOpModes;
 
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.res.Resources;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.roadrunner.Action;
@@ -16,6 +20,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.jetbrains.annotations.Contract;
+
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
@@ -116,6 +122,7 @@ public class UnifiedAuto extends LinearOpMode {
     }
 
     // Declare and initialize variables to prepare for running
+
     ArrayList<Boolean> poseMap = new ArrayList<>(Arrays.asList(false, false, false));
     boolean dpadDownPrev = false;
     boolean dpadUpPrev = false;
@@ -154,29 +161,40 @@ public class UnifiedAuto extends LinearOpMode {
         Pose2d initPose = startValues.getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
-        Action traj1;
-        int launchSpeed = 2120;
+        Action traj1, traj2, traj3;
+        Pose2d pose1, pose2;
+        int launchSpeed = 2180;
         switch (startValues.getValueA()) {
             case 0:
             case 1:
-                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(44, 0), Math.toRadians(25)).build();
+                pose1 = new Pose2d(new Vector2d(44, 0), Math.toRadians(20));
                 break;
             case 2:
             case 3:
-                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(0, 0), Math.toRadians(40)).build();
+                pose1 = new Pose2d(new Vector2d(0, 0), Math.toRadians(40));
                 launchSpeed = 2060;
                 break;
             case 4:
-                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(44, 0), Math.toRadians(-25)).build();
+                pose1 = new Pose2d(new Vector2d(44, 0), Math.toRadians(-25));
                 break;
             case 5:
             case 6:
-                traj1 = mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose()).strafeToSplineHeading(new Vector2d(0, 0), Math.toRadians(-45)).build();
+                pose1 = new Pose2d(new Vector2d(0, 0), Math.toRadians(-45));
                 launchSpeed = 2060;
                 break;
             default:
                 throw new RuntimeException("How did you get this far without throwing another exception?");
         }
+        traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
+
+        if (startValues.getValueA() >= 4) {
+            pose2 = new Pose2d(56, 56, Math.toRadians(90));
+        } else {
+            pose2 = new Pose2d(56, -56, Math.toRadians(-90));
+        }
+
+        traj2 = mecanumDrive.actionBuilder(pose1).strafeToLinearHeading(pose2.position, pose2.heading).build();
+        traj3 = mecanumDrive.actionBuilder(pose2).strafeToLinearHeading(pose1.position, pose1.heading).build();
 
         // Init limbo
         waitForStart();
@@ -204,7 +222,39 @@ public class UnifiedAuto extends LinearOpMode {
                         spindexer.spindex(),
                         new SleepAction(0.6),
                         flip.flipUp(),
-                        new SleepAction(0.6)
+                        new SleepAction(0.6),
+                        flip.flipDown(),
+                        launch.stopLauncher(),
+                        traj2,
+                        new SleepAction(1),
+                        spindexer.spindex(),
+                        new SleepAction(1),
+                        spindexer.spindex(),
+                        new SleepAction(1),
+                        new ParallelAction(
+                                launch.launchAtSpeed(launchSpeed),
+                                traj3
+                        ),
+                        flip.flipUp(),
+                        new SleepAction(0.6),
+                        flip.flipDown(),
+                        new SleepAction(0.6),
+                        spindexer.spindex(),
+                        new SleepAction(0.6),
+                        flip.flipUp(),
+                        new SleepAction(0.6),
+                        flip.flipDown(),
+                        new SleepAction(0.6),
+                        spindexer.spindex(),
+                        new SleepAction(0.6),
+                        flip.flipUp(),
+                        new SleepAction(0.6),
+                        flip.flipDown()
                 ));
+        try {
+            mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

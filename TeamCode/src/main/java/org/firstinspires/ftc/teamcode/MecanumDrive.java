@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.content.Context;
+
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.canvas.Canvas;
@@ -38,14 +40,25 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.messages.DriveCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.MecanumCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.MecanumLocalizerInputsMessage;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.lang.Math;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -84,7 +97,7 @@ public final class MecanumDrive {
         // path controller gains
         public double axialGain = 4;
         public double lateralGain = 4;
-        public double headingGain = 4; // shared with turn
+        public double headingGain = 2; // shared with turn
 
         public double axialVelGain = 1;
         public double lateralVelGain = 1;
@@ -247,6 +260,28 @@ public final class MecanumDrive {
         localizer = new ThreeDeadWheelLocalizer(hardwareMap, PARAMS.inPerTick, pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
+    }
+
+    public void writePoseToDisk(String xFileName, String yFileName, String hFileName) throws FileNotFoundException {
+        File xFile = AppUtil.getInstance().getSettingsFile(xFileName);
+        File yFile = AppUtil.getInstance().getSettingsFile(yFileName);
+        File hFile = AppUtil.getInstance().getSettingsFile(hFileName);
+
+        ReadWriteFile.writeFile(xFile, String.valueOf(localizer.getPose().position.x));
+        ReadWriteFile.writeFile(yFile, String.valueOf(localizer.getPose().position.y));
+        ReadWriteFile.writeFile(hFile, String.valueOf(localizer.getPose().heading.toDouble()));
+
+    }
+
+    public Pose2d readPoseFromDisk(String xFileName, String yFileName, String hFileName) throws FileNotFoundException {
+        File xFile = AppUtil.getInstance().getSettingsFile(xFileName);
+        File yFile = AppUtil.getInstance().getSettingsFile(yFileName);
+        File hFile = AppUtil.getInstance().getSettingsFile(hFileName);
+
+        double x = Double.parseDouble(ReadWriteFile.readFile(xFile).trim());
+        double y = Double.parseDouble(ReadWriteFile.readFile(yFile).trim());
+        double heading = Double.parseDouble(ReadWriteFile.readFile(hFile).trim());
+        return new Pose2d(x, y, heading);
     }
 
     public void setDrivePowers(PoseVelocity2d powers) {
