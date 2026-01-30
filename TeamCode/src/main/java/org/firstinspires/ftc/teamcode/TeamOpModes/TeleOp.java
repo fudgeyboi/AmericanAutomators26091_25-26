@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 // Import computing libraries
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -22,8 +23,10 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
 import org.firstinspires.ftc.robotcontroller.internal.FtcRobotControllerActivity;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.Drawing;
 
@@ -44,6 +47,8 @@ public class TeleOp extends LinearOpMode {
     boolean a2WasPressed = false;
     String closeOrFar = "close";
     boolean yWasPressed = false;
+    int playerX = 0;
+    int playerY = 0;
 
     // FINALLY GOT PLAYER CENTRIC WORKING! WOOHOO!
     Vector2d PCDrivePowers(Pose2d pose, double gamepadx, double gamepady) {
@@ -52,7 +57,7 @@ public class TeleOp extends LinearOpMode {
         double x = pose.position.x;
         double y = pose.position.y;
 
-        double theta = Math.atan2(x - 96, y - 48);
+        double theta = Math.atan2(x - playerX, y - playerY);
 
         Vector2d powerVec = new Vector2d(
                 ((gamepady * java.lang.Math.sin(theta + heading))
@@ -67,6 +72,17 @@ public class TeleOp extends LinearOpMode {
     }
     @Override
     public void runOpMode() {
+
+        // Initialize PCDrivePowers x/y
+        File rFile = AppUtil.getInstance().getSettingsFile("resultFile.txt");
+        double result = Double.parseDouble(ReadWriteFile.readFile(rFile).trim());
+        if (result >= 4) {
+            playerX = 48;
+            playerY = -96;
+        } else {
+            playerX = 48;
+            playerY = 96;
+        }
 
         // Initialize RoadRunner
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(180));
@@ -102,29 +118,23 @@ public class TeleOp extends LinearOpMode {
             TelemetryPacket packet = new TelemetryPacket();
 
             // Update running actions
-            List<Action> newActions = new ArrayList<>();
             Iterator<Action> iterator = runningActions.iterator();
             while (iterator.hasNext()) {
                 Action action = iterator.next();
                 action.preview(packet.fieldOverlay());
 
-                if (action.run(packet)) {
-                    newActions.add(action);
-                } else {
+                if (!action.run(packet)) {
                     iterator.remove();
                 }
             }
 
-            runningActions = newActions;
-            newActions = new ArrayList<>();
+
             iterator = trajectoryActions.iterator();
             while (iterator.hasNext()) {
                 Action action = iterator.next();
                 action.preview(packet.fieldOverlay());
 
-                if (action.run(packet)) {
-                    newActions.add(action);
-                } else {
+                if (!action.run(packet)) {
                     iterator.remove();
                 }
             }
@@ -133,15 +143,15 @@ public class TeleOp extends LinearOpMode {
             // Update pose + reset if necessary
             mecanumDrive.updatePoseEstimate();
             if (gamepad1.y && !yWasPressed) {
-                mecanumDrive.localizer.setPose(new Pose2d(0, 0, Math.toRadians(180)));
+                mecanumDrive.localizer.setPose(new Pose2d(0.01, 0.01, Math.toRadians(180)));
                 try {
                     mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
                 } catch (FileNotFoundException e) {
                     throw new RuntimeException(e);
                 }
             }
-            yWasPressed = gamepad1.y;
 
+            yWasPressed = gamepad1.y;
 
             // Queue actions
             if (gamepad1.dpad_up) {
@@ -153,15 +163,15 @@ public class TeleOp extends LinearOpMode {
             if (gamepad1.dpad_left) {
                 switch(closeOrFar) {
                     case "close":
-                        runningActions.add(launch.launchAtSpeed(2060));
+                        runningActions.add(launch.launchAtSpeed(1900));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
                                 .build());
                         break;
                     case "far":
-                        runningActions.add(launch.launchAtSpeed(2120));
+                        runningActions.add(launch.launchAtSpeed(2100));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(25))
+                                .strafeToLinearHeading(new Vector2d(44, 0), Math.toRadians(25))
                                 .build());
                         break;
                 }
@@ -169,15 +179,15 @@ public class TeleOp extends LinearOpMode {
             if (gamepad1.dpad_right) {
                 switch(closeOrFar) {
                     case "close":
-                        runningActions.add(launch.launchAtSpeed(2060));
+                        runningActions.add(launch.launchAtSpeed(1900));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
                                 .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-45))
                                 .build());
                         break;
                     case "far":
-                        runningActions.add(launch.launchAtSpeed(2120));
+                        runningActions.add(launch.launchAtSpeed(2100));
                         trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(48, 0), Math.toRadians(-25))
+                                .strafeToLinearHeading(new Vector2d(44, 0), Math.toRadians(-35))
                                 .build());
                         break;
                 }

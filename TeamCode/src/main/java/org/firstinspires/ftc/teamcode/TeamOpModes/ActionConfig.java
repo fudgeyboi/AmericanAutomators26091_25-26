@@ -16,7 +16,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 @Config
 public class ActionConfig {
     public static class Flip {
-        private final double retractedValue = 0.1, extendedValue = 0.52;
+        private final double retractedValue = 0.1, extendedValue = 0.55;
         private final Servo flipServo;
         public Flip(HardwareMap hardwareMap, String servoName) {
             flipServo = hardwareMap.get(Servo.class, servoName);
@@ -47,8 +47,8 @@ public class ActionConfig {
         public Launch(HardwareMap hardwareMap, String motorName) {
             launchMotor = hardwareMap.get(DcMotorEx.class, motorName);
             launchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            launchMotor.setCurrentAlert(8, CurrentUnit.AMPS);
-            launchMotor.setVelocityPIDFCoefficients(32, 1, 2, 16);
+            launchMotor.setCurrentAlert(10, CurrentUnit.AMPS);
+            launchMotor.setVelocityPIDFCoefficients(48, 0.2, 1, 12);
             launchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
         public double getLaunchSpeed() {
@@ -101,7 +101,7 @@ public class ActionConfig {
                 @Override
                 public boolean run(@NonNull TelemetryPacket telemetryPacket) {
                     if (!initialized) {
-                        launchMotor.setVelocity(Launch.this.launchSpeed);
+                        launchMotor.setVelocity(0);
                         initialized = true;
                     }
 

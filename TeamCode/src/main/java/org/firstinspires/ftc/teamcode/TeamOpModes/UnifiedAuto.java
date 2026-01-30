@@ -1,13 +1,13 @@
 package org.firstinspires.ftc.teamcode.TeamOpModes;
 
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.res.Resources;
 
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.AngularVelConstraint;
+import com.acmerobotics.roadrunner.MecanumKinematics;
+import com.acmerobotics.roadrunner.MinVelConstraint;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
@@ -17,10 +17,13 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ReadWriteFile;
 
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.jetbrains.annotations.Contract;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -130,6 +133,13 @@ public class UnifiedAuto extends LinearOpMode {
 
     public void runOpMode() {
         // Initialize variables
+        MecanumDrive.Params PARAMS = new MecanumDrive.Params();
+
+        MecanumKinematics kinematics = new MecanumKinematics(
+                PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
+
+        MinVelConstraint constraint = new MinVelConstraint(Arrays.asList(kinematics.new WheelVelConstraint(5), new AngularVelConstraint(PARAMS.maxAngVel)));
+
         int i = 0;
 
         // Initialize hardware
@@ -161,9 +171,9 @@ public class UnifiedAuto extends LinearOpMode {
         Pose2d initPose = startValues.getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
-        Action traj1, traj2, traj3;
-        Pose2d pose1, pose2;
-        int launchSpeed = 2180;
+        Action traj1, traj2, traj3, traj4;
+        Pose2d pose1, pose2, pose3;
+        int launchSpeed = 2100;
         switch (startValues.getValueA()) {
             case 0:
             case 1:
@@ -172,15 +182,15 @@ public class UnifiedAuto extends LinearOpMode {
             case 2:
             case 3:
                 pose1 = new Pose2d(new Vector2d(0, 0), Math.toRadians(40));
-                launchSpeed = 2060;
+                launchSpeed = 1900;
                 break;
             case 4:
-                pose1 = new Pose2d(new Vector2d(44, 0), Math.toRadians(-25));
+                pose1 = new Pose2d(new Vector2d(44, 0), Math.toRadians(-30));
                 break;
             case 5:
             case 6:
                 pose1 = new Pose2d(new Vector2d(0, 0), Math.toRadians(-45));
-                launchSpeed = 2060;
+                launchSpeed = 1900;
                 break;
             default:
                 throw new RuntimeException("How did you get this far without throwing another exception?");
@@ -188,13 +198,16 @@ public class UnifiedAuto extends LinearOpMode {
         traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
 
         if (startValues.getValueA() >= 4) {
-            pose2 = new Pose2d(56, 56, Math.toRadians(90));
+            pose2 = new Pose2d(12, 12, Math.toRadians(-90));
+            pose3 = new Pose2d(32, -52, Math.toRadians(90));
         } else {
-            pose2 = new Pose2d(56, -56, Math.toRadians(-90));
+            pose2 = new Pose2d(32, -26, Math.toRadians(-90));
+            pose3 = new Pose2d(32, -60, Math.toRadians(90));
         }
 
-        traj2 = mecanumDrive.actionBuilder(pose1).strafeToLinearHeading(pose2.position, pose2.heading).build();
-        traj3 = mecanumDrive.actionBuilder(pose2).strafeToLinearHeading(pose1.position, pose1.heading).build();
+        traj2 = mecanumDrive.actionBuilder(pose1).strafeToSplineHeading(pose2.position, pose2.heading).build();
+        traj3 = mecanumDrive.actionBuilder(pose2).strafeToConstantHeading(pose3.position, constraint).build();
+        traj4 = mecanumDrive.actionBuilder(pose3).setTangent(Math.toRadians(90)).splineToSplineHeading(pose1, Math.toRadians(0)).build();
 
         // Init limbo
         waitForStart();
@@ -206,53 +219,61 @@ public class UnifiedAuto extends LinearOpMode {
         Actions.runBlocking(
                 new SequentialAction(
                         new ParallelAction(
-                        launch.launchAtSpeed(launchSpeed),
+                        launch.setLaunchSpeed(launchSpeed),
+                        launch.launchUsingStoredSpeed(),
                         traj1
                         ),
                         flip.flipUp(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipDown(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         spindexer.spindex(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipUp(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipDown(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         spindexer.spindex(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipUp(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipDown(),
-                        launch.stopLauncher(),
-                        traj2,
-                        new SleepAction(1),
-                        spindexer.spindex(),
-                        new SleepAction(1),
-                        spindexer.spindex(),
-                        new SleepAction(1),
                         new ParallelAction(
-                                launch.launchAtSpeed(launchSpeed),
-                                traj3
+                                launch.stopLauncher(),
+                                traj2
+                        ),
+                        new ParallelAction(
+                                traj3,
+                                new SequentialAction(
+                                        new SleepAction(2),
+                                        spindexer.spindex(9)
+                                )
+                        ),
+                        new ParallelAction(
+                                launch.launchUsingStoredSpeed(),
+                                traj4
                         ),
                         flip.flipUp(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipDown(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         spindexer.spindex(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipUp(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipDown(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         spindexer.spindex(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipUp(),
-                        new SleepAction(0.6),
+                        new SleepAction(0.75),
                         flip.flipDown()
                 ));
         try {
             mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
+            File rFile = AppUtil.getInstance().getSettingsFile("resultFile.txt");
+
+            ReadWriteFile.writeFile(rFile, String.valueOf(startValues.getValueA()));
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
         }
