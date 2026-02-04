@@ -2,8 +2,12 @@ package org.firstinspires.ftc.teamcode.TeamOpModes;
 
 
 
+import static dev.nextftc.bindings.Bindings.button;
+
 import androidx.annotation.NonNull;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.AngularVelConstraint;
 import com.acmerobotics.roadrunner.MecanumKinematics;
@@ -28,6 +32,8 @@ import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
+
+import dev.nextftc.bindings.BindingManager;
 
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
@@ -126,21 +132,24 @@ public class UnifiedAuto extends LinearOpMode {
 
     // Declare and initialize variables to prepare for running
 
-    ArrayList<Boolean> poseMap = new ArrayList<>(Arrays.asList(false, false, false));
+    ArrayList<Boolean> poseMap = new ArrayList<>();
+    int i = 0;
     boolean dpadDownPrev = false;
     boolean dpadUpPrev = false;
+    private FtcDashboard dash = FtcDashboard.getInstance();
+
+    void setTrueAndIncrement() {
+        poseMap.set(i, true);
+        i++;
+    }
+
+    void setFalseAndIncrement() {
+        poseMap.set(i, false);
+        i++;
+    }
 
 
     public void runOpMode() {
-        // Initialize variables
-        MecanumDrive.Params PARAMS = new MecanumDrive.Params();
-
-        MecanumKinematics kinematics = new MecanumKinematics(
-                PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
-
-        MinVelConstraint constraint = new MinVelConstraint(Arrays.asList(kinematics.new WheelVelConstraint(5), new AngularVelConstraint(PARAMS.maxAngVel)));
-
-        int i = 0;
 
         // Initialize hardware
         Flip flip = new Flip(hardwareMap, "flip");
@@ -148,18 +157,13 @@ public class UnifiedAuto extends LinearOpMode {
         Spindexer spindexer = new Spindexer(hardwareMap, "spindexer");
         DcMotor intake = hardwareMap.get(DcMotor.class, "intake");
 
+        button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> setTrueAndIncrement());
+
+        button(() -> gamepad1.dpad_down).whenBecomesFalse(() -> setFalseAndIncrement());
+
         // Get an array of 3 binary numbers that signify where we start
-        while (i < poseMap.size() && !isStopRequested()) {
-            if (gamepad1.dpad_up && !dpadUpPrev) {
-                poseMap.set(i, true);
-                i++;
-            }
-            if (gamepad1.dpad_down && !dpadDownPrev) {
-                poseMap.set(i, false);
-                i++;
-            }
-            dpadUpPrev = gamepad1.dpad_up;
-            dpadDownPrev = gamepad1.dpad_down;
+        while (poseMap.size() < 3 && !isStopRequested()) {
+            BindingManager.update();
             telemetry.addData("bit 1", poseMap.get(0));
             telemetry.addData("bit 2", poseMap.get(1));
             telemetry.addData("bit 3", poseMap.get(2));
@@ -171,8 +175,8 @@ public class UnifiedAuto extends LinearOpMode {
         Pose2d initPose = startValues.getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
-        Action traj1, traj2, traj3, traj4;
-        Pose2d pose1, pose2, pose3;
+        Action traj1, traj2;
+        Pose2d pose1, pose2;
         int launchSpeed = 2100;
         switch (startValues.getValueA()) {
             case 0:
@@ -198,30 +202,23 @@ public class UnifiedAuto extends LinearOpMode {
         traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
 
         if (startValues.getValueA() >= 4) {
-            pose2 = new Pose2d(12, 12, Math.toRadians(-90));
-            pose3 = new Pose2d(32, -52, Math.toRadians(90));
+            pose2 = new Pose2d(36, 36, Math.toRadians(-90));
         } else {
-            pose2 = new Pose2d(32, -26, Math.toRadians(-90));
-            pose3 = new Pose2d(32, -60, Math.toRadians(90));
+            pose2 = new Pose2d(36, -36, Math.toRadians(-90));
         }
 
         traj2 = mecanumDrive.actionBuilder(pose1).strafeToSplineHeading(pose2.position, pose2.heading).build();
-        traj3 = mecanumDrive.actionBuilder(pose2).strafeToConstantHeading(pose3.position, constraint).build();
-        traj4 = mecanumDrive.actionBuilder(pose3).setTangent(Math.toRadians(90)).splineToSplineHeading(pose1, Math.toRadians(0)).build();
 
-        // Init limbo
-        waitForStart();
+        TelemetryPacket packet = new TelemetryPacket();
 
-        // Start spintake
-        intake.setPower(1);
 
-        // Run each action sequentially
-        Actions.runBlocking(
+        // Create the main action
+        Action mainAction =
                 new SequentialAction(
                         new ParallelAction(
-                        launch.setLaunchSpeed(launchSpeed),
-                        launch.launchUsingStoredSpeed(),
-                        traj1
+                                launch.setLaunchSpeed(launchSpeed),
+                                launch.launchUsingStoredSpeed(),
+                                traj1
                         ),
                         flip.flipUp(),
                         new SleepAction(0.75),
@@ -241,34 +238,31 @@ public class UnifiedAuto extends LinearOpMode {
                         new ParallelAction(
                                 launch.stopLauncher(),
                                 traj2
-                        ),
-                        new ParallelAction(
-                                traj3,
-                                new SequentialAction(
-                                        new SleepAction(2),
-                                        spindexer.spindex(9)
-                                )
-                        ),
-                        new ParallelAction(
-                                launch.launchUsingStoredSpeed(),
-                                traj4
-                        ),
-                        flip.flipUp(),
-                        new SleepAction(0.75),
-                        flip.flipDown(),
-                        new SleepAction(0.75),
-                        spindexer.spindex(),
-                        new SleepAction(0.75),
-                        flip.flipUp(),
-                        new SleepAction(0.75),
-                        flip.flipDown(),
-                        new SleepAction(0.75),
-                        spindexer.spindex(),
-                        new SleepAction(0.75),
-                        flip.flipUp(),
-                        new SleepAction(0.75),
-                        flip.flipDown()
-                ));
+                        )
+                );
+
+
+        packet.fieldOverlay().setStroke("#3F51B5");
+        mainAction.preview(packet.fieldOverlay());
+        dash.sendTelemetryPacket(packet);
+
+        // Init limbo
+        waitForStart();
+
+        // Start spintake
+        intake.setPower(1);
+
+        // Main loop
+        while (!isStopRequested()) {
+            packet = new TelemetryPacket();
+            if (!mainAction.run(packet)) {
+                break;
+            }
+            dash.sendTelemetryPacket(packet);
+        }
+
+        sleep(2000);
+        mecanumDrive.updatePoseEstimate();
         try {
             mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
             File rFile = AppUtil.getInstance().getSettingsFile("resultFile.txt");

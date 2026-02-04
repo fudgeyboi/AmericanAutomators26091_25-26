@@ -47,7 +47,7 @@ public class ActionConfig {
         public Launch(HardwareMap hardwareMap, String motorName) {
             launchMotor = hardwareMap.get(DcMotorEx.class, motorName);
             launchMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            launchMotor.setCurrentAlert(10, CurrentUnit.AMPS);
+            launchMotor.setCurrentAlert(5, CurrentUnit.AMPS);
             launchMotor.setVelocityPIDFCoefficients(48, 0.2, 1, 12);
             launchMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
@@ -79,6 +79,7 @@ public class ActionConfig {
                 }
             };
         }
+        public double getLaunchCurrent(CurrentUnit currentUnit) {return launchMotor.getCurrent(currentUnit);}
         public Action launchUsingStoredSpeed() {
             return new Action() {
                 private boolean initialized = false;
@@ -120,8 +121,24 @@ public class ActionConfig {
             spindexerMotor = hardwareMap.get(DcMotorEx.class, motorName);
             spindexerMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             spindexerMotor.setTargetPosition(0);
+            spindexerMotor.setCurrentAlert(4, CurrentUnit.AMPS);
             spindexerMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             spindexerMotor.setPower(1);
+        }
+        public void engageTrim() {
+            spindexerMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            spindexerMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+            spindexerMotor.setPower(0);
+        }
+        public void disengageTrim() {
+            spindexerMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            index = 0;
+            spindexerMotor.setTargetPosition((int) Math.round(index * 1425.1 / 3));
+            spindexerMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            spindexerMotor.setPower(1);
+        }
+        public void trimSpindexer(double leftTrigger, double rightTrigger) {
+            spindexerMotor.setPower((rightTrigger / 3) - (leftTrigger / 3));
         }
         public Action spindex() {
             return new Action() {

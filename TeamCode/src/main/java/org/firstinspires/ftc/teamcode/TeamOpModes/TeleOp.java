@@ -8,6 +8,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.ReadWriteFile;
+
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 // Import computing libraries
 import java.io.File;
@@ -23,16 +27,19 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.qualcomm.robotcore.util.ReadWriteFile;
-
-import org.firstinspires.ftc.robotcontroller.internal.FtcRobotControllerActivity;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.Drawing;
+
 
 // Import custom classes
 import org.firstinspires.ftc.teamcode.DriveException;
 import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
+
+
+// Import NextFTC classes
+import static dev.nextftc.bindings.Bindings.*;
+import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.bindings.Button;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
 public class TeleOp extends LinearOpMode {
@@ -44,9 +51,7 @@ public class TeleOp extends LinearOpMode {
     double prevTime = 0;
     double deltaTime = 0;
     int driveID = 3;
-    boolean a2WasPressed = false;
     String closeOrFar = "close";
-    boolean yWasPressed = false;
     int playerX = 0;
     int playerY = 0;
 
@@ -104,6 +109,88 @@ public class TeleOp extends LinearOpMode {
         Flip flip = new Flip(hardwareMap, "flip");
         Spindexer spindexer = new Spindexer(hardwareMap, "spindexer");
 
+        // Create buttons
+
+        Button flipButton = button(() -> gamepad2.y);
+
+        button(() -> gamepad1.y).whenBecomesTrue(() -> {
+            mecanumDrive.localizer.setPose(new Pose2d(0.01, 0.01, Math.toRadians(180)));
+            try {
+                mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        button(() -> gamepad1.b).whenBecomesTrue(() -> trajectoryActions = new ArrayList<>());
+
+        button(() -> gamepad2.a).whenBecomesTrue(() -> runningActions.add(spindexer.spindex()));
+
+        button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> {
+            closeOrFar = "close";
+            runningActions.add(launch.launchAtSpeed(1900));
+        });
+
+        button(() -> gamepad1.dpad_down).whenBecomesTrue(() -> {
+            closeOrFar = "far";
+            runningActions.add(launch.launchAtSpeed(2100));
+        });
+
+        button(() -> gamepad2.b).whenBecomesTrue(() -> runningActions.add(launch.stopLauncher()));
+
+        button(() -> gamepad1.back || gamepad2.back).whenBecomesTrue(() -> requestOpModeStop());
+
+        button(() -> gamepad1.dpad_left).whenBecomesTrue(() -> {
+            switch(closeOrFar) {
+                case "close":
+                    trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                            .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
+                            .build());
+                    break;
+                case "far":
+                    trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                            .strafeToLinearHeading(new Vector2d(44, 0), Math.toRadians(25))
+                            .build());
+                    break;
+            }
+        });
+
+        button(() -> gamepad1.dpad_right).whenBecomesTrue(() -> {
+            switch(closeOrFar) {
+                case "close":
+                    trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                            .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-45))
+                            .build());
+                    break;
+                case "far":
+                    trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
+                            .strafeToLinearHeading(new Vector2d(44, 0), Math.toRadians(-35))
+                            .build());
+                    break;
+            }
+        });
+
+        button(() -> gamepad1.left_bumper).whenBecomesTrue(() -> {
+            playerX = 48;
+            playerY = -96;
+        });
+
+        button(() -> gamepad1.right_bumper).whenBecomesTrue(() -> {
+            playerX = 48;
+            playerY = 96;
+        });
+
+        Button x2 = button(() -> gamepad2.x);
+
+        Button x2Toggle = x2.toggleOnBecomesTrue();
+        x2Toggle.whenBecomesTrue(() -> spindexer.engageTrim());
+        x2Toggle.whenBecomesFalse(() -> spindexer.disengageTrim());
+        x2Toggle.whenTrue(() -> spindexer.trimSpindexer(gamepad2.left_trigger, gamepad2.right_trigger));
+        x2Toggle.whenFalse(() -> intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger));
+
+        flipButton.whenBecomesFalse(() -> runningActions.add(flip.flipDown()));
+
+        flipButton.whenBecomesTrue(() -> runningActions.add(flip.flipUp()));
 
         // Init limbo
         waitForStart();
@@ -112,88 +199,39 @@ public class TeleOp extends LinearOpMode {
         runtime.reset();
 
         // Main loop
-        while (opModeIsActive() && !(gamepad1.back || gamepad2.back)) {
+        while (!isStopRequested()) {
 
             // Create new dashboard packet
             TelemetryPacket packet = new TelemetryPacket();
 
-            // Update running actions
-            Iterator<Action> iterator = runningActions.iterator();
-            while (iterator.hasNext()) {
-                Action action = iterator.next();
-                action.preview(packet.fieldOverlay());
 
-                if (!action.run(packet)) {
-                    iterator.remove();
-                }
-            }
-
-
-            iterator = trajectoryActions.iterator();
-            while (iterator.hasNext()) {
-                Action action = iterator.next();
-                action.preview(packet.fieldOverlay());
-
-                if (!action.run(packet)) {
-                    iterator.remove();
-                }
-            }
-
-
-            // Update pose + reset if necessary
+            // Update pose
             mecanumDrive.updatePoseEstimate();
-            if (gamepad1.y && !yWasPressed) {
-                mecanumDrive.localizer.setPose(new Pose2d(0.01, 0.01, Math.toRadians(180)));
-                try {
-                    mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
+
+            // Update running actions
+            Iterator<Action> actionIterator = runningActions.iterator();
+            while (actionIterator.hasNext()) {
+                Action action = actionIterator.next();
+                action.preview(packet.fieldOverlay());
+
+                if (!action.run(packet)) {
+                    actionIterator.remove();
                 }
             }
 
-            yWasPressed = gamepad1.y;
 
-            // Queue actions
-            if (gamepad1.dpad_up) {
-                closeOrFar = "close";
-            }
-            if (gamepad1.dpad_down) {
-                closeOrFar = "far";
-            }
-            if (gamepad1.dpad_left) {
-                switch(closeOrFar) {
-                    case "close":
-                        runningActions.add(launch.launchAtSpeed(1900));
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(45))
-                                .build());
-                        break;
-                    case "far":
-                        runningActions.add(launch.launchAtSpeed(2100));
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(44, 0), Math.toRadians(25))
-                                .build());
-                        break;
+            // Update gamepads
+            BindingManager.update();
+
+
+            Iterator<Action> trajectoryIterator = trajectoryActions.iterator();
+            while (trajectoryIterator.hasNext()) {
+                Action action = trajectoryIterator.next();
+                action.preview(packet.fieldOverlay());
+
+                if (!action.run(packet)) {
+                    trajectoryIterator.remove();
                 }
-            }
-            if (gamepad1.dpad_right) {
-                switch(closeOrFar) {
-                    case "close":
-                        runningActions.add(launch.launchAtSpeed(1900));
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(0, 0), Math.toRadians(-45))
-                                .build());
-                        break;
-                    case "far":
-                        runningActions.add(launch.launchAtSpeed(2100));
-                        trajectoryActions.add(mecanumDrive.actionBuilder(mecanumDrive.localizer.getPose())
-                                .strafeToLinearHeading(new Vector2d(44, 0), Math.toRadians(-35))
-                                .build());
-                        break;
-                }
-            }
-            if (gamepad1.b) {
-                trajectoryActions = new ArrayList<>();
             }
 
             // Switch drive mode
@@ -248,37 +286,15 @@ public class TeleOp extends LinearOpMode {
                 }
             }
 
-            // Control drive system switching
-            // (not implemented)
-
-            // Misc motors block
-            {
-                if (gamepad2.b) {
-                    runningActions.add(launch.stopLauncher());
-                }
-                if (gamepad2.a && !a2WasPressed) {
-                    runningActions.add(spindexer.spindex());
-                }
-                a2WasPressed = gamepad2.a;
-                intake.setPower(gamepad2.right_trigger - gamepad2.left_trigger);
-            }
-
-            // Servo block
-            {
-                if (gamepad2.y) {
-                    runningActions.add(flip.flipUp());
-                } else {
-                    runningActions.add(flip.flipDown());
-                }
-            }
-
             // Add data to telemetry
             deltaTime = runtime.milliseconds() - prevTime;
             prevTime = runtime.milliseconds();
-            packet.put("Tick time (ms)", deltaTime);
             telemetry.addData("Tick time (ms)", deltaTime);
-            packet.put("Shooter velocity", launch.getLaunchSpeed());
+            packet.put("Tick time (ms)", deltaTime);
             telemetry.addData("Shooter velocity: ", launch.getLaunchSpeed());
+            packet.put("Shooter velocity", launch.getLaunchSpeed());
+            telemetry.addData("Shooter current: ", launch.getLaunchCurrent(CurrentUnit.MILLIAMPS));
+            packet.put("Shooter current: ", launch.getLaunchCurrent(CurrentUnit.MILLIAMPS));
             packet.fieldOverlay().setStroke("#3F51B5");
             Drawing.drawRobot(packet.fieldOverlay(), mecanumDrive.localizer.getPose());
 
@@ -286,6 +302,9 @@ public class TeleOp extends LinearOpMode {
             dash.sendTelemetryPacket(packet);
             telemetry.update();
         }
+
+        BindingManager.reset();
+
         try {
             mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
         } catch (FileNotFoundException e) {
