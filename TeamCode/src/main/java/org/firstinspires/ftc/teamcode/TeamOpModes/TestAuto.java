@@ -36,7 +36,7 @@ import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
 import dev.nextftc.bindings.BindingManager;
 
 @Autonomous
-public class UnifiedAuto extends LinearOpMode {
+public class TestAuto extends LinearOpMode {
 
     public static <T> ArrayList<T> addAndMoveRight(ArrayList<T> inputArray, int index, T thingToAdd) {
         ArrayList<T> result = new ArrayList<>(inputArray.size() + 1);
@@ -56,6 +56,7 @@ public class UnifiedAuto extends LinearOpMode {
             this.valueA = valueA;
             this.valueB = valueB;
         }
+
         public ReturnPair() {
             this.valueA = 0;
             this.valueB = new Pose2d(0, 0, 0);
@@ -65,12 +66,15 @@ public class UnifiedAuto extends LinearOpMode {
         public int getValueA() {
             return this.valueA;
         }
+
         public void setValueA(int valueA) {
             this.valueA = valueA;
         }
+
         public Pose2d getValueB() {
             return this.valueB;
         }
+
         public void setValueB(Pose2d valueB) {
             this.valueB = valueB;
         }
@@ -131,11 +135,8 @@ public class UnifiedAuto extends LinearOpMode {
     }
 
     // Declare and initialize variables to prepare for running
-
     ArrayList<Boolean> poseMap = new ArrayList<>();
     int i = 0;
-    boolean dpadDownPrev = false;
-    boolean dpadUpPrev = false;
     private FtcDashboard dash = FtcDashboard.getInstance();
 
     void setTrueAndIncrement() {
@@ -150,6 +151,15 @@ public class UnifiedAuto extends LinearOpMode {
 
 
     public void runOpMode() {
+
+        // Initialize velocity constraint
+        MecanumDrive.Params PARAMS = new MecanumDrive.Params();
+
+        MecanumKinematics kinematics = new MecanumKinematics(
+                PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
+
+        MinVelConstraint constraint = new MinVelConstraint(Arrays.asList(kinematics.new WheelVelConstraint(5), new AngularVelConstraint(PARAMS.maxAngVel)));
+
 
         // Initialize hardware
         Flip flip = new Flip(hardwareMap, "flip");
@@ -175,8 +185,8 @@ public class UnifiedAuto extends LinearOpMode {
         Pose2d initPose = startValues.getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
-        Action traj1, traj2;
-        Pose2d pose1, pose2;
+        Action traj1, traj2, traj3, traj4;
+        Pose2d pose1, pose2, pose3;
         int launchSpeed = 2100;
         switch (startValues.getValueA()) {
             case 0:
@@ -203,11 +213,15 @@ public class UnifiedAuto extends LinearOpMode {
 
         if (startValues.getValueA() >= 4) {
             pose2 = new Pose2d(36, 36, Math.toRadians(-90));
+            pose3 = new Pose2d(32, -52, Math.toRadians(90));
         } else {
             pose2 = new Pose2d(36, -36, Math.toRadians(-90));
+            pose3 = new Pose2d(32, -60, Math.toRadians(90));
         }
 
         traj2 = mecanumDrive.actionBuilder(pose1).strafeToSplineHeading(pose2.position, pose2.heading).build();
+        traj3 = mecanumDrive.actionBuilder(pose2).strafeToConstantHeading(pose3.position, constraint).build();
+        traj4 = mecanumDrive.actionBuilder(pose3).setTangent(Math.toRadians(90)).splineToSplineHeading(pose1, Math.toRadians(0)).build();
 
         TelemetryPacket packet = new TelemetryPacket();
 
@@ -238,7 +252,33 @@ public class UnifiedAuto extends LinearOpMode {
                         new ParallelAction(
                                 launch.stopLauncher(),
                                 traj2
-                        )
+                        ),
+                        new ParallelAction(
+                                traj3,
+                                new SequentialAction(
+                                        new SleepAction(2),
+                                        spindexer.spindex(9)
+                                )
+                        ),
+                        new ParallelAction(
+                                launch.launchUsingStoredSpeed(),
+                                traj4
+                        ),
+                        flip.flipUp(),
+                        new SleepAction(0.75),
+                        flip.flipDown(),
+                        new SleepAction(0.75),
+                        spindexer.spindex(),
+                        new SleepAction(0.75),
+                        flip.flipUp(),
+                        new SleepAction(0.75),
+                        flip.flipDown(),
+                        new SleepAction(0.75),
+                        spindexer.spindex(),
+                        new SleepAction(0.75),
+                        flip.flipUp(),
+                        new SleepAction(0.75),
+                        flip.flipDown()
                 );
 
 

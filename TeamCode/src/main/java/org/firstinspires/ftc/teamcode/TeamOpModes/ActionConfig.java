@@ -138,7 +138,7 @@ public class ActionConfig {
             spindexerMotor.setPower(1);
         }
         public void trimSpindexer(double leftTrigger, double rightTrigger) {
-            spindexerMotor.setPower((rightTrigger / 3) - (leftTrigger / 3));
+            spindexerMotor.setPower((rightTrigger / 3   ) - (leftTrigger / 3));
         }
         public Action spindex() {
             return new Action() {
