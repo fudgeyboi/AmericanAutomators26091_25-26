@@ -34,6 +34,7 @@ import java.util.Arrays;
 import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
 
 import dev.nextftc.bindings.BindingManager;
+import dev.nextftc.bindings.Button;
 
 @Autonomous
 public class UnifiedAuto extends LinearOpMode {
@@ -131,11 +132,9 @@ public class UnifiedAuto extends LinearOpMode {
     }
 
     // Declare and initialize variables to prepare for running
-
     ArrayList<Boolean> poseMap = new ArrayList<>();
     int i = 0;
-    boolean dpadDownPrev = false;
-    boolean dpadUpPrev = false;
+    int delay = 0;
     private FtcDashboard dash = FtcDashboard.getInstance();
 
     void setTrueAndIncrement() {
@@ -157,16 +156,37 @@ public class UnifiedAuto extends LinearOpMode {
         Spindexer spindexer = new Spindexer(hardwareMap, "spindexer");
         DcMotor intake = hardwareMap.get(DcMotor.class, "intake");
 
-        button(() -> gamepad1.dpad_up).whenBecomesTrue(() -> setTrueAndIncrement());
 
-        button(() -> gamepad1.dpad_down).whenBecomesFalse(() -> setFalseAndIncrement());
+        // Initialize buttons
+        Button increment = button(() -> gamepad1.dpad_up);
+        Button decrement = button(() -> gamepad1.dpad_down);
+
+        increment.inLayer("initPose")
+                .whenBecomesTrue(() -> setTrueAndIncrement())
+                .inLayer("initDelay")
+                .whenBecomesTrue(() -> delay++);
+
+        decrement.inLayer("initPose")
+                .whenBecomesTrue(() -> setFalseAndIncrement())
+                .inLayer("initDelay")
+                .whenBecomesTrue(() -> delay--);
 
         // Get an array of 3 binary numbers that signify where we start
+        BindingManager.setLayer("initPose");
         while (poseMap.size() < 3 && !isStopRequested()) {
             BindingManager.update();
             for (int j = 0; j < poseMap.size(); j++) {
                 telemetry.addData("bit " + j + ": ", poseMap.get(j));
             }
+            telemetry.update();
+        }
+
+        // Configure delay for auto
+        BindingManager.setLayer("initDelay");
+
+        while (!gamepad1.b && !isStopRequested() && !opModeIsActive()) {
+            BindingManager.update();
+            telemetry.addData("Delay: ", delay);
             telemetry.update();
         }
 
@@ -181,30 +201,33 @@ public class UnifiedAuto extends LinearOpMode {
         switch (startValues.getValueA()) {
             case 0:
             case 1:
-                pose1 = new Pose2d(new Vector2d(44, 0), Math.toRadians(20));
+                pose1 = new Pose2d(new Vector2d(54, -12), Math.toRadians(20));
+                traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
                 break;
             case 2:
             case 3:
-                pose1 = new Pose2d(new Vector2d(0, 0), Math.toRadians(40));
-                launchSpeed = 1900;
+                pose1 = new Pose2d(new Vector2d(-16, -16), Math.toRadians(40));
+                launchSpeed = 1800;
+                traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
                 break;
             case 4:
-                pose1 = new Pose2d(new Vector2d(44, 0), Math.toRadians(-30));
+                pose1 = new Pose2d(new Vector2d(60, 10), Math.toRadians(-30));
+                traj1 = mecanumDrive.actionBuilder(initPose).turnTo(Math.toRadians(-30)).build();
                 break;
             case 5:
             case 6:
-                pose1 = new Pose2d(new Vector2d(0, 0), Math.toRadians(-45));
-                launchSpeed = 1900;
+                pose1 = new Pose2d(new Vector2d(-16, 16), Math.toRadians(-45));
+                traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
+                launchSpeed = 1800;
                 break;
             default:
                 throw new RuntimeException("How did you get this far without throwing another exception?");
         }
-        traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
 
         if (startValues.getValueA() >= 4) {
-            pose2 = new Pose2d(36, 36, Math.toRadians(-90));
+            pose2 = new Pose2d(-60, 36, Math.toRadians(0));
         } else {
-            pose2 = new Pose2d(36, -36, Math.toRadians(-90));
+            pose2 = new Pose2d(-60, -36, Math.toRadians(0));
         }
 
         traj2 = mecanumDrive.actionBuilder(pose1).strafeToSplineHeading(pose2.position, pose2.heading).build();
@@ -215,6 +238,7 @@ public class UnifiedAuto extends LinearOpMode {
         // Create the main action
         Action mainAction =
                 new SequentialAction(
+                        new SleepAction(delay),
                         new ParallelAction(
                                 launch.setLaunchSpeed(launchSpeed),
                                 launch.launchUsingStoredSpeed(),
