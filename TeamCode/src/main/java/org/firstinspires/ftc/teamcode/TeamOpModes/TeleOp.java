@@ -50,7 +50,7 @@ public class TeleOp extends LinearOpMode {
     private List<Action> trajectoryActions = new ArrayList<>();
     double prevTime = 0;
     double deltaTime = 0;
-    int driveID = 3;
+    int driveID = 2;
     String closeOrFar = "close";
     int playerX = 0;
     int playerY = 0;
@@ -78,26 +78,9 @@ public class TeleOp extends LinearOpMode {
     @Override
     public void runOpMode() {
 
-        // Initialize PCDrivePowers x/y
-        File rFile = AppUtil.getInstance().getSettingsFile("resultFile.txt");
-        double result = Double.parseDouble(ReadWriteFile.readFile(rFile).trim());
-        if (result >= 4) {
-            playerX = 48;
-            playerY = -96;
-        } else {
-            playerX = 48;
-            playerY = 96;
-        }
-
         // Initialize RoadRunner
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(180));
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initialPose);
-        try {
-            Pose2d pose = mecanumDrive.readPoseFromDisk("xFile.txt", "yFile.txt", "hFile.txt");
-            mecanumDrive.localizer.setPose(pose);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
 
         // Create stopwatch
         ElapsedTime runtime = new ElapsedTime();
@@ -117,9 +100,7 @@ public class TeleOp extends LinearOpMode {
             mecanumDrive.localizer.setPose(new Pose2d(0.01, 0.01, Math.toRadians(180)));
             try {
                 mecanumDrive.writePoseToDisk("xFile.txt", "yFile.txt", "hFile.txt");
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+            } catch (Exception ignored) {}
         });
 
         button(() -> gamepad1.b).whenBecomesTrue(() -> trajectoryActions = new ArrayList<>());
@@ -257,10 +238,10 @@ public class TeleOp extends LinearOpMode {
                         double heading = mecanumDrive.localizer.getPose().heading.toDouble();
                         mecanumDrive.setDrivePowers(new PoseVelocity2d(
                                 new Vector2d(
-                                        ((gamepad1.left_stick_y * java.lang.Math.sin(heading))
-                                                - (gamepad1.left_stick_x * java.lang.Math.cos(heading))),
-                                        ((gamepad1.left_stick_y * java.lang.Math.cos(heading))
-                                                + (gamepad1.left_stick_x * java.lang.Math.sin(heading)))
+                                        ((-gamepad1.left_stick_y * java.lang.Math.cos(-heading))
+                                                + (gamepad1.left_stick_x * java.lang.Math.sin(-heading))),
+                                        ((-gamepad1.left_stick_y * java.lang.Math.sin(-heading))
+                                                - (gamepad1.left_stick_x * java.lang.Math.cos(-heading)))
                                 ),
                                 -gamepad1.right_stick_x
                         ));

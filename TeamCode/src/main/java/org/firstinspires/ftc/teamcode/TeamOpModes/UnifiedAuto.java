@@ -120,7 +120,7 @@ public class UnifiedAuto extends LinearOpMode {
                 startPose = new Pose2d(60, 12, Math.toRadians(-40));
                 break;
             case 5:
-                startPose = new Pose2d(-36, 60, Math.toRadians(-90));
+                startPose = new Pose2d(-38, 56, Math.toRadians(-90));
                 break;
             case 6:
                 startPose = new Pose2d(-60, 46, Math.toRadians(-50));
@@ -149,6 +149,14 @@ public class UnifiedAuto extends LinearOpMode {
 
 
     public void runOpMode() {
+
+        // Initialize velocity constraint
+        MecanumDrive.Params PARAMS = new MecanumDrive.Params();
+
+        MecanumKinematics kinematics = new MecanumKinematics(
+                PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
+
+        MinVelConstraint constraint = new MinVelConstraint(Arrays.asList(kinematics.new WheelVelConstraint(10), new AngularVelConstraint(PARAMS.maxAngVel)));
 
         // Initialize hardware
         Flip flip = new Flip(hardwareMap, "flip");
@@ -195,42 +203,53 @@ public class UnifiedAuto extends LinearOpMode {
         Pose2d initPose = startValues.getValueB();
         MecanumDrive mecanumDrive = new MecanumDrive(hardwareMap, initPose);
 
-        Action traj1, traj2;
-        Pose2d pose1, pose2;
+        Pose2d pose1, pose2, pose3, pose4;
+        Action traj1, traj2, traj3, traj4, traj5;
         int launchSpeed = 2100;
         switch (startValues.getValueA()) {
             case 0:
             case 1:
                 pose1 = new Pose2d(new Vector2d(54, -12), Math.toRadians(20));
                 traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
+                pose2 = new Pose2d(30, -24, Math.toRadians(-90));
+                pose3 = new Pose2d(30, -54, Math.toRadians(-90));
+                pose4 = new Pose2d(36, -12, 0);
                 break;
             case 2:
             case 3:
                 pose1 = new Pose2d(new Vector2d(-16, -16), Math.toRadians(40));
-                launchSpeed = 1800;
+                pose2 = new Pose2d(-18, -24, Math.toRadians(-90));
+                pose3 = new Pose2d(-18, -54, Math.toRadians(-90));
                 traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
+                pose4 = new Pose2d(-36, -12, 0);
+                launchSpeed = 1800;
                 break;
             case 4:
-                pose1 = new Pose2d(new Vector2d(60, 10), Math.toRadians(-30));
-                traj1 = mecanumDrive.actionBuilder(initPose).turnTo(Math.toRadians(-30)).build();
+                pose1 = new Pose2d(new Vector2d(60, 10), Math.toRadians(-20));
+                traj1 = mecanumDrive.actionBuilder(initPose).turnTo(Math.toRadians(-20)).build();
+                pose2 = new Pose2d(36, 24, Math.toRadians(90));
+                pose3 = new Pose2d(36, 54, Math.toRadians(90));
+                pose4 = new Pose2d(36, 12, 0);
+                launchSpeed = 2160;
                 break;
             case 5:
             case 6:
                 pose1 = new Pose2d(new Vector2d(-16, 16), Math.toRadians(-45));
                 traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
+                pose2 = new Pose2d(-12, 24, Math.toRadians(90));
+                pose3 = new Pose2d(-12, 54, Math.toRadians(90));
+                pose4 = new Pose2d(-36, 12, 0);
+
                 launchSpeed = 1800;
                 break;
             default:
                 throw new RuntimeException("How did you get this far without throwing another exception?");
         }
 
-        if (startValues.getValueA() >= 4) {
-            pose2 = new Pose2d(-60, 36, Math.toRadians(0));
-        } else {
-            pose2 = new Pose2d(-60, -36, Math.toRadians(0));
-        }
-
         traj2 = mecanumDrive.actionBuilder(pose1).strafeToSplineHeading(pose2.position, pose2.heading).build();
+        traj3 = mecanumDrive.actionBuilder(pose2).strafeToSplineHeading(pose3.position, pose3.heading, constraint).build();
+        traj4 = mecanumDrive.actionBuilder(pose3).strafeToSplineHeading(pose1.position, pose1.heading).build();
+        traj5 = mecanumDrive.actionBuilder(pose1).strafeToSplineHeading(pose4.position, pose4.heading).build();
 
         TelemetryPacket packet = new TelemetryPacket();
 
@@ -262,7 +281,37 @@ public class UnifiedAuto extends LinearOpMode {
                         new ParallelAction(
                                 launch.stopLauncher(),
                                 traj2
-                        )
+                        ),
+                        new ParallelAction(
+                                traj3,
+                                new SequentialAction(
+                                        new SleepAction(1.5),
+                                        spindexer.spindex(),
+                                        new SleepAction(0.75),
+                                        spindexer.spindex(),
+                                        new SleepAction(0.75),
+                                        spindexer.spindex())
+                        ),
+                        new ParallelAction(
+                                launch.launchUsingStoredSpeed(),
+                                traj4
+                        ),
+                        flip.flipUp(),
+                        new SleepAction(0.75),
+                        flip.flipDown(),
+                        new SleepAction(0.75),
+                        spindexer.spindex(),
+                        new SleepAction(0.75),
+                        flip.flipUp(),
+                        new SleepAction(0.75),
+                        flip.flipDown(),
+                        new SleepAction(0.75),
+                        spindexer.spindex(),
+                        new SleepAction(0.75),
+                        flip.flipUp(),
+                        new SleepAction(0.75),
+                        flip.flipDown(),
+                        traj5
                 );
 
 
