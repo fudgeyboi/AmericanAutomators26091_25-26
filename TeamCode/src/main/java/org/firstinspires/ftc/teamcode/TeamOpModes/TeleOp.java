@@ -54,6 +54,7 @@ public class TeleOp extends LinearOpMode {
     String closeOrFar = "close";
     int playerX = 0;
     int playerY = 0;
+    double headingOffset = 0;
 
     // FINALLY GOT PLAYER CENTRIC WORKING! WOOHOO!
     Vector2d PCDrivePowers(Pose2d pose, double gamepadx, double gamepady) {
@@ -152,11 +153,13 @@ public class TeleOp extends LinearOpMode {
         });
 
         button(() -> gamepad1.left_bumper).whenBecomesTrue(() -> {
+            headingOffset = Math.toRadians(-90);
             playerX = 48;
             playerY = -96;
         });
 
         button(() -> gamepad1.right_bumper).whenBecomesTrue(() -> {
+            headingOffset = Math.toRadians(90);
             playerX = 48;
             playerY = 96;
         });
@@ -233,15 +236,14 @@ public class TeleOp extends LinearOpMode {
                         break;
 
                     case 2:
-
                         // Field centric
                         double heading = mecanumDrive.localizer.getPose().heading.toDouble();
                         mecanumDrive.setDrivePowers(new PoseVelocity2d(
                                 new Vector2d(
-                                        ((-gamepad1.left_stick_y * java.lang.Math.cos(-heading))
-                                                + (gamepad1.left_stick_x * java.lang.Math.sin(-heading))),
-                                        ((-gamepad1.left_stick_y * java.lang.Math.sin(-heading))
-                                                - (gamepad1.left_stick_x * java.lang.Math.cos(-heading)))
+                                        ((-gamepad1.left_stick_y * java.lang.Math.cos(headingOffset - heading))
+                                                + (gamepad1.left_stick_x * java.lang.Math.sin(headingOffset - heading))),
+                                        ((-gamepad1.left_stick_y * java.lang.Math.sin(headingOffset - heading))
+                                                - (gamepad1.left_stick_x * java.lang.Math.cos(headingOffset - heading)))
                                 ),
                                 -gamepad1.right_stick_x
                         ));

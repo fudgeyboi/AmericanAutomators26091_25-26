@@ -218,10 +218,10 @@ public class UnifiedAuto extends LinearOpMode {
             case 2:
             case 3:
                 pose1 = new Pose2d(new Vector2d(-16, -16), Math.toRadians(40));
+                traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
                 pose2 = new Pose2d(-18, -24, Math.toRadians(-90));
                 pose3 = new Pose2d(-18, -54, Math.toRadians(-90));
-                traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
-                pose4 = new Pose2d(-36, -12, 0);
+                pose4 = new Pose2d(-48, -12, 0);
                 launchSpeed = 1800;
                 break;
             case 4:
@@ -238,7 +238,7 @@ public class UnifiedAuto extends LinearOpMode {
                 traj1 = mecanumDrive.actionBuilder(initPose).strafeToLinearHeading(pose1.position, pose1.heading).build();
                 pose2 = new Pose2d(-12, 24, Math.toRadians(90));
                 pose3 = new Pose2d(-12, 54, Math.toRadians(90));
-                pose4 = new Pose2d(-36, 12, 0);
+                pose4 = new Pose2d(-48, 12, 0);
 
                 launchSpeed = 1800;
                 break;
