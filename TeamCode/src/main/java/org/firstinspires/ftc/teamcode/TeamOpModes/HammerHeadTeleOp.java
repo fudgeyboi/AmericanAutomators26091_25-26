@@ -5,45 +5,29 @@ package org.firstinspires.ftc.teamcode.TeamOpModes;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 // Import hardware classes
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.ReadWriteFile;
-
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 // Import computing libraries
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 // Import RoadRunner classes + dependencies
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
-import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.Drawing;
 
 
 // Import custom classes
-import org.firstinspires.ftc.teamcode.DriveException;
 import org.firstinspires.ftc.teamcode.TankDrive;
-import org.firstinspires.ftc.teamcode.TeamOpModes.ActionConfig.*;
+import org.firstinspires.ftc.teamcode.util.GamepadMap;
+import org.firstinspires.ftc.teamcode.util.ThreadedMapper;
 
 
 // Import NextFTC classes
-import static dev.nextftc.bindings.Bindings.*;
 import dev.nextftc.bindings.BindingManager;
-import dev.nextftc.bindings.Button;
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
-public class HammerHeadTeleOp extends LinearOpMode {
+public class HammerHeadTeleOp extends LinearOpMode implements ThreadedMapper {
 
     // Declare and initialize global variables
     private FtcDashboard dash = FtcDashboard.getInstance();
@@ -54,6 +38,12 @@ public class HammerHeadTeleOp extends LinearOpMode {
 
         // Create stopwatch
         ElapsedTime runtime = new ElapsedTime();
+
+        // Map gamepads
+        GamepadMapSingle gamepadMap = mapGamepadSingle(gamepad1);
+
+        telemetry.addData("Gamepad Map is standard? ", gamepadMap.map == GamepadMap.STANDARD ? "true" : "false");
+        telemetry.update();
 
         // Init limbo
         waitForStart();
@@ -72,7 +62,9 @@ public class HammerHeadTeleOp extends LinearOpMode {
                             -gamepad1.left_stick_y,
                             0
                     ),
-                    -gamepad1.right_stick_x
+                    gamepadMap.map == GamepadMap.STANDARD
+                            ? -gamepad1.right_stick_x
+                            : ((gamepad1.right_stick_x - gamepad1.right_stick_y) / 2)
             ));
 
             // Update gamepads
